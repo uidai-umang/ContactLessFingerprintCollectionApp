@@ -26,6 +26,7 @@ fragmentKtx = "1.8.9"
 retrofit = "3.0.0"
 okhttp = "5.4.0"
 workmanager = "2.11.2"
+chucker = "4.3.1"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -94,6 +95,9 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor" }
 
 workmanager = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workmanager" }
+
+chucker-debug = { group = "com.github.chuckerteam.chucker", name = "library", version.ref = "chucker" }
+chucker-release = { group = "com.github.chuckerteam.chucker", name = "library-no-op", version.ref = "chucker" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
