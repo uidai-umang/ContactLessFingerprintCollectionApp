@@ -1,25 +1,15 @@
 package app.gov.uidai.contactlessregistration.usecase
 
-import app.gov.uidai.contactlessregistration.data.entity.PendingCaptureEntity
-import app.gov.uidai.contactlessregistration.model.capture.CaptureResponse
 import app.gov.uidai.contactlessregistration.data.remote.network.ApiResult
+import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
+import app.gov.uidai.contactlessregistration.model.capture.CaptureResponse
 
 interface CaptureQueueManager {
 
     // Called after every successful finger capture.
-    // Checks for pending captures for this resident first —
-    // if any exist, sends batch (pending + new), else sends single.
+    // Checks pending for this resident first — batch if any, single if none.
     suspend fun uploadOrQueue(
-        sessionId: String,
-        residentPseudonymId: String,
-        operatorId: String,
-        fingerType: String,
-        hand: String,
-        imageBase64: String,
-        imageChecksum: String,
-        cameraModel: String,
-        cameraResolution: String,
-        deviceModel: String
+        request: CaptureRequest
     ): ApiResult<List<CaptureResponse>>
 
     // Called by WorkManager every 15 mins.

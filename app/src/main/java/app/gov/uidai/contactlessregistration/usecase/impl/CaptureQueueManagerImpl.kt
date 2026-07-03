@@ -25,47 +25,20 @@ class CaptureQueueManagerImpl @Inject constructor(
     // If none → single upload.
     // On any failure → saves new capture to local DB.
     override suspend fun uploadOrQueue(
-        sessionId: String,
-        residentPseudonymId: String,
-        operatorId: String,
-        fingerType: String,
-        hand: String,
-        imageBase64: String,
-        imageChecksum: String,
-        cameraModel: String,
-        cameraResolution: String,
-        deviceModel: String
+        request: CaptureRequest
     ): ApiResult<List<CaptureResponse>> {
-
-        val newCapture = buildCaptureRequest(
-            sessionId = sessionId,
-            residentPseudonymId = residentPseudonymId,
-            operatorId = operatorId,
-            fingerType = fingerType,
-            hand = hand,
-            imageBase64 = imageBase64,
-            imageChecksum = imageChecksum,
-            cameraModel = cameraModel,
-            cameraResolution = cameraResolution,
-            deviceModel = deviceModel
+        val pendingCaptures = pendingCaptureDao.getByResidentId(
+            request.residentPseudonymId
         )
 
-        // Check if any pending captures exist for this resident
-        val pendingCaptures = pendingCaptureDao.getByResidentId(residentPseudonymId)
-
         return if (pendingCaptures.isEmpty()) {
-            // No pending — try single upload
-            Log.d(TAG, "No pending captures for resident. Trying single upload.")
-            uploadSingle(newCapture)
+            Log.d(TAG, "No pending captures. Trying single upload.")
+            uploadSingle(request)
         } else {
-            // Pending exist — batch upload everything together
-            Log.d(TAG, "${pendingCaptures.size} pending captures found. Trying batch upload.")
+            Log.d(TAG, "${pendingCaptures.size} pending found. Trying batch upload.")
             uploadBatch(
                 pendingCaptures = pendingCaptures,
-                newCapture = newCapture,
-                sessionId = sessionId,
-                residentPseudonymId = residentPseudonymId,
-                operatorId = operatorId
+                newRequest = request
             )
         }
     }
@@ -95,34 +68,26 @@ class CaptureQueueManagerImpl @Inject constructor(
     // On failure saves new capture to local DB — existing pending already there.
     private suspend fun uploadBatch(
         pendingCaptures: List<PendingCaptureEntity>,
-        newCapture: CaptureRequest,
-        sessionId: String,
-        residentPseudonymId: String,
-        operatorId: String
+        newRequest: CaptureRequest
     ): ApiResult<List<CaptureResponse>> {
-
-        // Build full batch — existing pending + new capture
-        val batchRequests = pendingCaptures.map { it.toCaptureRequest() } + newCapture
+        val batchRequests = pendingCaptures.map { it.toCaptureRequest() } + newRequest
 
         val result = captureUseCase.uploadBatchCaptures(batchRequests)
 
         return when (result) {
             is ApiResult.Success -> {
-                // Clear all pending for this session — they're now uploaded
-                pendingCaptureDao.deleteBySessionId(sessionId)
-                Log.d(TAG, "Batch upload succeeded. Cleared ${pendingCaptures.size} pending captures.")
+                pendingCaptureDao.deleteBySessionId(newRequest.sessionId)
+                Log.d(TAG, "Batch upload succeeded. Cleared ${pendingCaptures.size} pending.")
                 ApiResult.Success(result.data)
             }
 
             is ApiResult.Error -> {
-                // Save new capture to pending — existing ones already in DB
-                Log.w(TAG, "Batch upload failed. Saving new capture to queue: ${result.message}")
-                saveToPendingQueue(newCapture)
+                Log.w(TAG, "Batch upload failed. Saving new to queue: ${result.message}")
+                saveToPendingQueue(newRequest)
                 ApiResult.Error(result.message, result.code)
             }
         }
     }
-
     // Called by WorkManager every 15 mins.
     // Groups all pending by session_id and uploads sequentially.
     // Stops on first session failure — retries everything next cycle.
@@ -180,7 +145,7 @@ class CaptureQueueManagerImpl @Inject constructor(
             operatorId = request.operatorId,
             fingerType = request.fingerType,
             hand = request.hand,
-            imageBase64 = request.imageBase64,
+            imageBytes = request.imageBytes,
             imageChecksum = request.imageChecksum,
             cameraModel = request.cameraModel,
             cameraResolution = request.cameraResolution,
@@ -197,34 +162,7 @@ class CaptureQueueManagerImpl @Inject constructor(
             operatorId = operatorId,
             fingerType = fingerType,
             hand = hand,
-            imageBase64 = imageBase64,
-            imageChecksum = imageChecksum,
-            cameraModel = cameraModel,
-            cameraResolution = cameraResolution,
-            deviceModel = deviceModel
-        )
-    }
-
-    // Builds a CaptureRequest from individual fields
-    private fun buildCaptureRequest(
-        sessionId: String,
-        residentPseudonymId: String,
-        operatorId: String,
-        fingerType: String,
-        hand: String,
-        imageBase64: String,
-        imageChecksum: String,
-        cameraModel: String,
-        cameraResolution: String,
-        deviceModel: String
-    ): CaptureRequest {
-        return CaptureRequest(
-            sessionId = sessionId,
-            residentPseudonymId = residentPseudonymId,
-            operatorId = operatorId,
-            fingerType = fingerType,
-            hand = hand,
-            imageBase64 = imageBase64,
+            imageBytes = imageBytes,
             imageChecksum = imageChecksum,
             cameraModel = cameraModel,
             cameraResolution = cameraResolution,

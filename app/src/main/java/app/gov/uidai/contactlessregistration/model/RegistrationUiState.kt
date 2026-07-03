@@ -18,7 +18,12 @@ data class RegistrationUiState(
         FingerPosition.LEFT_LITTLE to null,
         FingerPosition.RIGHT_LITTLE to null,
     ),
-    val message: String? = null
+    val message: String? = null,
+    val residentPseudonymId: String = "",
+    val sessionId: String = "",
+    val isLookingUpResident: Boolean = false,
+    val totalCaptured: Int = 0,
+    val isComplete: Boolean = false
 ) {
     val hasMinimumFingerprints: Boolean
         get() = fingerprints.values.count { it != null } >= 3
