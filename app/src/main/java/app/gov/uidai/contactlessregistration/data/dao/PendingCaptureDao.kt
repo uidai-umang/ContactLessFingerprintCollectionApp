@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import app.gov.uidai.contactlessregistration.data.entity.PendingCaptureEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PendingCaptureDao {
@@ -19,6 +20,16 @@ interface PendingCaptureDao {
     // Returns pending captures for a specific resident — used on every click
     @Query("SELECT * FROM pending_captures WHERE residentPseudonymId = :residentId ORDER BY id ASC")
     suspend fun getByResidentId(residentId: String): List<PendingCaptureEntity>
+
+    // Reactive stream of pending captures per resident —
+    // UI observes this to update finger status badges in real time
+    @Query("SELECT * FROM pending_captures WHERE residentPseudonymId = :residentId ORDER BY id ASC")
+    fun observeByResidentId(residentId: String): Flow<List<PendingCaptureEntity>>
+
+    // Reactive count of all pending captures —
+    // WorkManager and sync indicator observe this
+    @Query("SELECT COUNT(*) FROM pending_captures")
+    fun observePendingCount(): Flow<Int>
 
     // Deletes all captures for a session after successful batch upload
     @Query("DELETE FROM pending_captures WHERE sessionId = :sessionId")
