@@ -2,6 +2,9 @@ package app.gov.uidai.contactlessregistration.repository.impl
 
 import app.gov.uidai.contactlessregistration.data.remote.api.ClfApiService
 import app.gov.uidai.contactlessregistration.data.remote.network.ApiResult
+import app.gov.uidai.contactlessregistration.data.remote.network.MultipartHelper.buildBatchMetadataParts
+import app.gov.uidai.contactlessregistration.data.remote.network.MultipartHelper.buildImagePart
+import app.gov.uidai.contactlessregistration.data.remote.network.MultipartHelper.buildMetadataParts
 import app.gov.uidai.contactlessregistration.data.remote.network.ResponseHandler
 import app.gov.uidai.contactlessregistration.model.capture.BatchCaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
@@ -39,12 +42,18 @@ class ClfRepositoryImpl @Inject constructor(
     override suspend fun uploadCapture(
         request: CaptureRequest
     ): ApiResult<CaptureResponse> = ResponseHandler.safeApiCall {
-        apiService.uploadCapture(request)
+        apiService.uploadCapture(
+            image = buildImagePart(request.imageBytes, request.fingerType),
+            metadata = buildMetadataParts(request)
+        )
     }
 
     override suspend fun uploadBatchCaptures(
-        request: BatchCaptureRequest
+        requests: List<CaptureRequest>
     ): ApiResult<List<CaptureResponse>> = ResponseHandler.safeApiCall {
-        apiService.uploadBatchCaptures(request)
+        apiService.uploadBatchCaptures(
+            images = requests.map { buildImagePart(it.imageBytes, it.fingerType) },
+            metadata = buildBatchMetadataParts(requests)
+        )
     }
 }

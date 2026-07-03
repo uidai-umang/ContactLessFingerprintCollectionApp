@@ -14,7 +14,8 @@ class CLFingerprint(
     embedding: ByteArray,
     fingerQuality: FingerQuality? = null,
     val jp2ByteArray: ByteArray,
-    val bitmap: Bitmap
+    val bitmap: Bitmap,
+    val imageBytes: ByteArray = jp2ByteArray
 ) : Fingerprint(
     fingerPosition = fingerPosition,
     embedding = embedding,
@@ -26,13 +27,15 @@ class CLFingerprint(
         embedding: ByteArray = this.embedding,
         jp2ByteArray: ByteArray = this.jp2ByteArray,
         fingerQuality: FingerQuality? = this.fingerQuality,
-        bitmap: Bitmap = this.bitmap
+        bitmap: Bitmap = this.bitmap,
+        imageBytes: ByteArray = this.imageBytes
     ): CLFingerprint = CLFingerprint(
         fingerPosition = fingerPosition,
         embedding = embedding,
         fingerQuality = fingerQuality,
         jp2ByteArray = jp2ByteArray,
-        bitmap = bitmap
+        bitmap = bitmap,
+        imageBytes = imageBytes
     )
 }
 

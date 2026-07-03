@@ -8,9 +8,14 @@ import app.gov.uidai.contactlessregistration.model.resident.ResidentLookupRespon
 import app.gov.uidai.contactlessregistration.model.session.CloseSessionRequest
 import app.gov.uidai.contactlessregistration.model.session.CreateSessionRequest
 import app.gov.uidai.contactlessregistration.model.session.CreateSessionResponse
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
+import retrofit2.http.PartMap
 
 interface ClfApiService {
 
@@ -29,13 +34,17 @@ interface ClfApiService {
         @Body request: CloseSessionRequest
     ): Response<Unit>
 
+    @Multipart
     @POST(Urls.CAPTURE_UPLOAD)
     suspend fun uploadCapture(
-        @Body request: CaptureRequest
+        @Part image: MultipartBody.Part,
+        @PartMap metadata: Map<String, @JvmSuppressWildcards RequestBody>
     ): Response<CaptureResponse>
 
+    @Multipart
     @POST(Urls.CAPTURE_BATCH_UPLOAD)
     suspend fun uploadBatchCaptures(
-        @Body request: BatchCaptureRequest
+        @Part images: List<MultipartBody.Part>,
+        @PartMap metadata: Map<String, @JvmSuppressWildcards RequestBody>
     ): Response<List<CaptureResponse>>
 }

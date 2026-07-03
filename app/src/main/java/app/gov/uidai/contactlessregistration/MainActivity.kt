@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.fragment.app.FragmentActivity
 import app.gov.uidai.contactlessregistration.ui.theme.md_theme_scrim
 import app.gov.uidai.contactlessregistration.ui.theme.md_theme_surface
+import app.gov.uidai.contactlessregistration.utils.worker.CaptureWorkScheduler
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -30,5 +31,6 @@ class MainActivity : FragmentActivity() {
             )
         )
         sharedViewModel.initialize(this)
+        CaptureWorkScheduler.schedule(this)
     }
 }

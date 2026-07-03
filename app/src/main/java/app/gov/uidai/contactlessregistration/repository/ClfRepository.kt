@@ -29,6 +29,6 @@ interface ClfRepository {
     ): ApiResult<CaptureResponse>
 
     suspend fun uploadBatchCaptures(
-        request: BatchCaptureRequest
+        requests: List<CaptureRequest>
     ): ApiResult<List<CaptureResponse>>
 }

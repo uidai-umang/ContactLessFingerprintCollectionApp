@@ -14,7 +14,7 @@ data class CaptureRequest(
     @SerializedName("glare_score") val glareScore: Double = 0.0,
     @SerializedName("attempt_count") val attemptCount: Int = 1,
     @SerializedName("degraded_flag") val degradedFlag: Boolean = false,
-    @SerializedName("image_base64") val imageBase64: String,
+    @SerializedName("imageBytes") val imageBytes: ByteArray,
     @SerializedName("image_checksum") val imageChecksum: String = "",
     @SerializedName("camera_model") val cameraModel: String = "",
     @SerializedName("camera_resolution") val cameraResolution: String = "",
