@@ -7,8 +7,10 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import app.gov.uidai.contactlessregistration.data.converter.FingerPositionConverter
 import app.gov.uidai.contactlessregistration.data.dao.FingerprintDao
+import app.gov.uidai.contactlessregistration.data.dao.PendingCaptureDao
 import app.gov.uidai.contactlessregistration.data.dao.UserDao
 import app.gov.uidai.contactlessregistration.data.entity.FingerprintEntity
+import app.gov.uidai.contactlessregistration.data.entity.PendingCaptureEntity
 import app.gov.uidai.contactlessregistration.data.entity.UserEntity
 import dagger.Module
 import dagger.Provides
@@ -18,8 +20,8 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Database(
-    entities = [UserEntity::class, FingerprintEntity::class],
-    version = 1,
+    entities = [UserEntity::class, FingerprintEntity::class, PendingCaptureEntity::class],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(
@@ -28,6 +30,8 @@ import javax.inject.Singleton
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun fingerprintDao(): FingerprintDao
+
+    abstract fun pendingCaptureDao(): PendingCaptureDao
 }
 
 @Module
@@ -54,5 +58,10 @@ object DatabaseModule {
     @Provides
     fun provideFingerprintDao(database: AppDatabase): FingerprintDao {
         return database.fingerprintDao()
+    }
+
+    @Provides
+    fun providePendingCaptureDao(database: AppDatabase): PendingCaptureDao {
+        return database.pendingCaptureDao()
     }
 }

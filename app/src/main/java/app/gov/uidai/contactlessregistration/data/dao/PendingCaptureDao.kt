@@ -1,0 +1,38 @@
+package app.gov.uidai.contactlessregistration.data.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import app.gov.uidai.contactlessregistration.data.entity.PendingCaptureEntity
+
+@Dao
+interface PendingCaptureDao {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(capture: PendingCaptureEntity)
+
+    // Returns all pending captures ordered by insertion — preserves capture sequence
+    @Query("SELECT * FROM pending_captures ORDER BY id ASC")
+    suspend fun getAll(): List<PendingCaptureEntity>
+
+    // Returns pending captures for a specific resident — used on every click
+    @Query("SELECT * FROM pending_captures WHERE residentPseudonymId = :residentId ORDER BY id ASC")
+    suspend fun getByResidentId(residentId: String): List<PendingCaptureEntity>
+
+    // Deletes all captures for a session after successful batch upload
+    @Query("DELETE FROM pending_captures WHERE sessionId = :sessionId")
+    suspend fun deleteBySessionId(sessionId: String)
+
+    // Deletes a single capture after successful single upload
+    @Query("DELETE FROM pending_captures WHERE id = :id")
+    suspend fun deleteById(id: Int)
+
+    // Increments retry count per session after a failed upload attempt
+    @Query("UPDATE pending_captures SET retryCount = retryCount + 1 WHERE sessionId = :sessionId")
+    suspend fun incrementRetryCount(sessionId: String)
+
+    // Returns count of pending captures — used by WorkManager to decide if work is needed
+    @Query("SELECT COUNT(*) FROM pending_captures")
+    suspend fun getPendingCount(): Int
+}
