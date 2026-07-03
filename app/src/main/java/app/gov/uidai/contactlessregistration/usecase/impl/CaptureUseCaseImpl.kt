@@ -19,11 +19,10 @@ class CaptureUseCaseImpl @Inject constructor(
         return clfRepository.uploadCapture(request)
     }
 
-    // Wraps list of captures into BatchCaptureRequest and uploads
+    // Uploads multiple pending captures in one batch request
     override suspend fun uploadBatchCaptures(
         requests: List<CaptureRequest>
     ): ApiResult<List<CaptureResponse>> {
-        val batchRequest = BatchCaptureRequest(captures = requests)
-        return clfRepository.uploadBatchCaptures(batchRequest)
+        return clfRepository.uploadBatchCaptures(requests)
     }
 }
