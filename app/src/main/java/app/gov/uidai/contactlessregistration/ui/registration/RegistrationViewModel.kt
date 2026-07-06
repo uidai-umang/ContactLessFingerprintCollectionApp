@@ -60,9 +60,9 @@ class RegistrationViewModel @Inject constructor(
         viewModelScope.launch {
             val result = residentUseCase.lookupResident(
                 aadhaarHash = currentUidHash,
-                ageGroup = "",
-                gender = "",
-                skinTone = ""
+                ageGroup = "25",
+                gender = "Male",
+                skinTone = "Dusky"
             )
 
             when (result) {
