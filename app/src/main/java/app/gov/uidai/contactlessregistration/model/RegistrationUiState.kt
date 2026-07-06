@@ -1,5 +1,7 @@
 package app.gov.uidai.contactlessregistration.model
 
+import app.gov.uidai.contactlessregistration.model.FingerPosition
+
 // UI State for Registration Fragment
 data class RegistrationUiState(
     val name: String = "",
@@ -17,6 +19,18 @@ data class RegistrationUiState(
         FingerPosition.RIGHT_RING to null,
         FingerPosition.LEFT_LITTLE to null,
         FingerPosition.RIGHT_LITTLE to null,
+    ),
+    val fingerUploadStatus: Map<FingerPosition, FingerCaptureStatus> = mapOf(
+        FingerPosition.LEFT_THUMB to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.RIGHT_THUMB to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.LEFT_INDEX to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.RIGHT_INDEX to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.LEFT_MIDDLE to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.RIGHT_MIDDLE to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.LEFT_RING to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.RIGHT_RING to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.LEFT_LITTLE to FingerCaptureStatus.NOT_CAPTURED,
+        FingerPosition.RIGHT_LITTLE to FingerCaptureStatus.NOT_CAPTURED,
     ),
     val message: String? = null,
     val residentPseudonymId: String = "",
