@@ -4,6 +4,8 @@ import android.util.Log
 import app.gov.uidai.contactlessregistration.data.dao.PendingCaptureDao
 import app.gov.uidai.contactlessregistration.data.entity.PendingCaptureEntity
 import app.gov.uidai.contactlessregistration.data.remote.network.ApiResult
+import app.gov.uidai.contactlessregistration.data.remote.network.ErrorCodeMapper
+import app.gov.uidai.contactlessregistration.data.remote.network.ErrorBehavior
 import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureResponse
 import app.gov.uidai.contactlessregistration.usecase.CaptureQueueManager
@@ -44,6 +46,7 @@ class CaptureQueueManagerImpl @Inject constructor(
     }
 
     // Tries single upload. On failure saves to local DB.
+    // 409 is treated as soft-success: the finger was already captured previously.
     private suspend fun uploadSingle(
         request: CaptureRequest
     ): ApiResult<List<CaptureResponse>> {
@@ -56,16 +59,21 @@ class CaptureQueueManagerImpl @Inject constructor(
             }
 
             is ApiResult.Error -> {
+                if (ErrorCodeMapper.behaviorFor(result.code) == ErrorBehavior.TREAT_AS_DUPLICATE_SUCCESS) {
+                    Log.d(TAG, "Single upload 409 — finger already captured: ${request.fingerType}")
+                    return ApiResult.Success(emptyList())
+                }
                 Log.w(TAG, "Single upload failed. Saving to local queue: ${result.message}")
                 saveToPendingQueue(request)
-                ApiResult.Error(result.message, result.code)
+                ApiResult.Error(result.message, result.code, result.errorData)
             }
         }
     }
 
     // Builds batch from pending + new capture, tries batch upload.
     // On success clears session's pending queue.
-    // On failure saves new capture to local DB — existing pending already there.
+    // 409 is treated as soft-success: all fingers in the batch were already captured.
+    // On other failure saves new capture to local DB — existing pending already there.
     private suspend fun uploadBatch(
         pendingCaptures: List<PendingCaptureEntity>,
         newRequest: CaptureRequest
@@ -82,9 +90,14 @@ class CaptureQueueManagerImpl @Inject constructor(
             }
 
             is ApiResult.Error -> {
+                if (ErrorCodeMapper.behaviorFor(result.code) == ErrorBehavior.TREAT_AS_DUPLICATE_SUCCESS) {
+                    pendingCaptureDao.deleteBySessionId(newRequest.sessionId)
+                    Log.d(TAG, "Batch upload 409 — all fingers already captured. Cleared pending queue.")
+                    return ApiResult.Success(emptyList())
+                }
                 Log.w(TAG, "Batch upload failed. Saving new to queue: ${result.message}")
                 saveToPendingQueue(newRequest)
-                ApiResult.Error(result.message, result.code)
+                ApiResult.Error(result.message, result.code, result.errorData)
             }
         }
     }
@@ -129,7 +142,7 @@ class CaptureQueueManagerImpl @Inject constructor(
                     pendingCaptureDao.incrementRetryCount(sessionId)
                     Log.w(TAG, "Sync: Session $sessionId failed. Retrying next cycle.")
                     // Stop processing — retry all remaining next cycle
-                    return ApiResult.Error(result.message, result.code)
+                    return ApiResult.Error(result.message, result.code, result.errorData)
                 }
             }
         }
