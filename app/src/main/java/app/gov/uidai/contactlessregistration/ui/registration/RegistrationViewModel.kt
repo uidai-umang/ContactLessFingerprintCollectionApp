@@ -1,14 +1,21 @@
 package app.gov.uidai.contactlessregistration.ui.registration
 
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.gov.uidai.contactlessregistration.data.remote.network.ApiResult
 import app.gov.uidai.contactlessregistration.model.CLFingerprint
+import app.gov.uidai.contactlessregistration.model.FingerCaptureStatus
 import app.gov.uidai.contactlessregistration.model.FingerPosition
 import app.gov.uidai.contactlessregistration.model.FingerType
 import app.gov.uidai.contactlessregistration.model.RegistrationUiState
 import app.gov.uidai.contactlessregistration.model.SDKResult
 import app.gov.uidai.contactlessregistration.model.User
+import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
 import app.gov.uidai.contactlessregistration.repository.FileRepository
+import app.gov.uidai.contactlessregistration.usecase.CaptureQueueManager
+import app.gov.uidai.contactlessregistration.usecase.ResidentUseCase
+import app.gov.uidai.contactlessregistration.usecase.SessionUseCase
 import app.gov.uidai.contactlessregistration.usecase.UserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +30,10 @@ import kotlin.collections.set
 @HiltViewModel
 class RegistrationViewModel @Inject constructor(
     private val userUseCase: UserUseCase,
-    private val fileRepository: FileRepository
+    private val fileRepository: FileRepository,
+    private val residentUseCase: ResidentUseCase,
+    private val sessionUseCase: SessionUseCase,
+    private val captureQueueManager: CaptureQueueManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrationUiState())
@@ -33,9 +43,76 @@ class RegistrationViewModel @Inject constructor(
     val registrationResult = _registrationResult.asStateFlow()
 
     private var currentUidHash: String = ""
+    private var currentResidentId: String = ""
+    private var currentSessionId: String = ""
+    private val testOperatorId = "00000000-0000-0000-0000-000000000001"
+    private val testDeviceId = "00000000-0000-0000-0000-000000000002"
+    private val testCentreId = "00000000-0000-0000-0000-000000000003"
 
     fun setUidHash(uidHash: String) {
         currentUidHash = uidHash
+        lookupResidentAndCreateSession()
+    }
+
+    private fun lookupResidentAndCreateSession() {
+        _uiState.update { it.copy(isLookingUpResident = true) }
+
+        viewModelScope.launch {
+            val result = residentUseCase.lookupResident(
+                aadhaarHash = currentUidHash,
+                ageGroup = "25",
+                gender = "Male",
+                skinTone = "Dusky"
+            )
+
+            when (result) {
+                is ApiResult.Success -> {
+                    val response = result.data
+                    currentResidentId = response.residentPseudonymId
+
+                    _uiState.update {
+                        it.copy(
+                            isLookingUpResident = false,
+                            residentPseudonymId = response.residentPseudonymId,
+                            totalCaptured = response.totalCaptured,
+                            isComplete = response.isComplete
+                        )
+                    }
+
+                    createSession(response.residentPseudonymId)
+                }
+
+                is ApiResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLookingUpResident = false,
+                            message = "Failed to load resident: ${result.message}"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun createSession(residentPseudonymId: String) {
+        val result = sessionUseCase.createSession(
+            operatorId = testOperatorId,
+            deviceId = testDeviceId,
+            centreId = testCentreId,
+            residentPseudonymId = residentPseudonymId
+        )
+
+        when (result) {
+            is ApiResult.Success -> {
+                currentSessionId = result.data.sessionId
+            }
+
+            is ApiResult.Error -> {
+                _uiState.update {
+                    it.copy(message = "Session error: ${result.message}")
+                }
+            }
+        }
     }
 
     fun onNameChanged(name: String) {
@@ -88,6 +165,12 @@ class RegistrationViewModel @Inject constructor(
                         message = null
                     )
                 }
+                viewModelScope.launch {
+                    uploadCapture(
+                        fingerPosition = data.fingerPosition,
+                        imageBytes = data.imageBytes
+                    )
+                }
             }
 
             is SDKResult.Error -> {
@@ -96,6 +179,43 @@ class RegistrationViewModel @Inject constructor(
                         loadingFinger = null,
                         message = result.message
                     )
+                }
+            }
+        }
+    }
+
+    private suspend fun uploadCapture(
+        fingerPosition: FingerPosition,
+        imageBytes: ByteArray
+    ) {
+        val hand = if (fingerPosition.name.startsWith("LEFT")) "LEFT" else "RIGHT"
+
+        val request = CaptureRequest(
+            sessionId = currentSessionId,
+            residentPseudonymId = currentResidentId,
+            operatorId = testOperatorId,
+            fingerType = fingerPosition.name,
+            hand = hand,
+            imageBytes = imageBytes,
+            deviceModel = Build.MODEL
+        )
+
+        val result = captureQueueManager.uploadOrQueue(request)
+
+        when (result) {
+            is ApiResult.Success -> {
+                val lastResponse = result.data.lastOrNull()
+                _uiState.update { state ->
+                    state.copy(
+                        totalCaptured = lastResponse?.totalCaptured ?: state.totalCaptured,
+                        isComplete = lastResponse?.isComplete ?: state.isComplete
+                    )
+                }
+            }
+
+            is ApiResult.Error -> {
+                _uiState.update { state ->
+                    state.copy(message = "Upload queued — will retry automatically")
                 }
             }
         }
@@ -152,6 +272,9 @@ class RegistrationViewModel @Inject constructor(
 
                 saveRegisteredImagesToGallery(fingerprints = fingerprints)
 
+                if (currentSessionId.isNotEmpty()) {
+                    sessionUseCase.closeSession(currentSessionId)
+                }
                 _registrationResult.update { RegistrationResult.Success }
 
             } catch (ex: Exception) {

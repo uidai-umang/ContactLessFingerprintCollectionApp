@@ -19,6 +19,11 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        def localProperties = new Properties()
+        localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+
+        buildConfigField "String", "BACKEND_URL", "\"${localProperties['BACKEND_URL']}\""
     }
 
     buildTypes {
@@ -34,6 +39,18 @@ android {
     kotlinOptions {
         jvmTarget = '11'
     }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += [
+                    "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+            ]
+        }
+    }
 }
 
 dependencies {
@@ -44,6 +61,7 @@ dependencies {
 
     // Core AndroidX libraries
     implementation libs.androidx.core.ktx
+    implementation libs.androidx.hilt.common
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.androidx.activity.compose
 
@@ -76,6 +94,7 @@ dependencies {
     implementation libs.hilt.android
     implementation libs.androidx.hilt.navigation.compose
     ksp libs.hilt.compiler
+    implementation libs.androidx.hilt.work
 
     // Image handling (for carousel)
     implementation libs.coil.compose
@@ -94,4 +113,20 @@ dependencies {
     androidTestImplementation libs.androidx.ui.test.junit4
     debugImplementation libs.androidx.ui.tooling
     debugImplementation libs.androidx.ui.test.manifest
+
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+
+    // OkHttp BOM — version managed by BOM
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+
+    // WorkManager
+    implementation(libs.workmanager)
+
+    // Chucker
+    debugImplementation(libs.chucker.debug)
+    releaseImplementation(libs.chucker.release)
 }
