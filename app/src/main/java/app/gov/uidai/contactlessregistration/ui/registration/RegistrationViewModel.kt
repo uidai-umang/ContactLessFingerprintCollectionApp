@@ -70,12 +70,31 @@ class RegistrationViewModel @Inject constructor(
                     val response = result.data
                     currentResidentId = response.residentPseudonymId
 
+                    val capturedFingers = response.capturedFingers.mapNotNull { name ->
+                        FingerPosition.entries.find { it.name == name }
+                    }
+
+                    val pendingFingers = response.pendingUploads.mapNotNull { name ->
+                        FingerPosition.entries.find { it.name == name }
+                    }
+
+                    val backendStatusMap = FingerPosition.entries
+                        .filter { it != FingerPosition.UNKNOWN }
+                        .associateWith { position ->
+                            when(position) {
+                                in capturedFingers -> FingerCaptureStatus.CAPTURED
+                                in pendingFingers -> FingerCaptureStatus.PENDING
+                                else -> FingerCaptureStatus.NOT_CAPTURED
+                            }
+                        }
+
                     _uiState.update {
                         it.copy(
                             isLookingUpResident = false,
                             residentPseudonymId = response.residentPseudonymId,
                             totalCaptured = response.totalCaptured,
-                            isComplete = response.isComplete
+                            isComplete = response.isComplete,
+                            fingerUploadStatus = backendStatusMap
                         )
                     }
 
@@ -143,7 +162,10 @@ class RegistrationViewModel @Inject constructor(
         } else {
             _uiState.update {
                 it.copy(
-                    loadingFinger = fingerPosition
+                    loadingFinger = fingerPosition,
+                    fingerUploadStatus = it.fingerUploadStatus.toMutableMap().apply {
+                        set(fingerPosition, FingerCaptureStatus.CAPTURING)
+                    }
                 )
             }
             launchSdk()
@@ -162,7 +184,10 @@ class RegistrationViewModel @Inject constructor(
                     currentState.copy(
                         fingerprints = updatedFingerprints,
                         loadingFinger = null,
-                        message = null
+                        message = null,
+                        fingerUploadStatus = currentState.fingerUploadStatus.toMutableMap().apply {
+                            set(data.fingerPosition, FingerCaptureStatus.UPLOADING)
+                        }
                     )
                 }
                 viewModelScope.launch {
@@ -177,7 +202,12 @@ class RegistrationViewModel @Inject constructor(
                 _uiState.update {
                     currentState.copy(
                         loadingFinger = null,
-                        message = result.message
+                        message = result.message,
+                        fingerUploadStatus = currentState.loadingFinger?.let { position ->
+                            currentState.fingerUploadStatus.toMutableMap().apply {
+                                set(position, FingerCaptureStatus.NOT_CAPTURED)
+                            }
+                        } ?: currentState.fingerUploadStatus
                     )
                 }
             }
@@ -205,17 +235,37 @@ class RegistrationViewModel @Inject constructor(
         when (result) {
             is ApiResult.Success -> {
                 val lastResponse = result.data.lastOrNull()
+
+                // Mark EVERY finger in the batch response as CAPTURED, not just the
+                // one that triggered this call — CaptureQueueManager may have bundled
+                // previously-pending fingers into the same batch upload
+                val updatedStatusMap = _uiState.value.fingerUploadStatus.toMutableMap()
+                result.data.forEach { captureResponse ->
+                    val respondedPosition = FingerPosition.entries.find {
+                        it.name == captureResponse.fingerType
+                    }
+                    respondedPosition?.let {
+                        updatedStatusMap[it] = FingerCaptureStatus.CAPTURED
+                    }
+                }
+
                 _uiState.update { state ->
                     state.copy(
                         totalCaptured = lastResponse?.totalCaptured ?: state.totalCaptured,
-                        isComplete = lastResponse?.isComplete ?: state.isComplete
+                        isComplete = lastResponse?.isComplete ?: state.isComplete,
+                        fingerUploadStatus = updatedStatusMap
                     )
                 }
             }
 
             is ApiResult.Error -> {
                 _uiState.update { state ->
-                    state.copy(message = "Upload queued — will retry automatically")
+                    state.copy(
+                        message = "Upload queued — will retry automatically",
+                        fingerUploadStatus = state.fingerUploadStatus.toMutableMap().apply {
+                            set(fingerPosition, FingerCaptureStatus.PENDING)
+                        }
+                    )
                 }
             }
         }
@@ -226,10 +276,14 @@ class RegistrationViewModel @Inject constructor(
         val updatedFingerprints = currentState.fingerprints.toMutableMap().apply {
             set(fingerPosition, null)
         }
+        val updatedStatus = currentState.fingerUploadStatus.toMutableMap().apply {
+            set(fingerPosition, FingerCaptureStatus.NOT_CAPTURED)
+        }
 
         _uiState.update {
             currentState.copy(
-                fingerprints = updatedFingerprints
+                fingerprints = updatedFingerprints,
+                fingerUploadStatus = updatedStatus
             )
         }
     }
