@@ -202,7 +202,12 @@ class RegistrationViewModel @Inject constructor(
                 _uiState.update {
                     currentState.copy(
                         loadingFinger = null,
-                        message = result.message
+                        message = result.message,
+                        fingerUploadStatus = currentState.loadingFinger?.let { position ->
+                            currentState.fingerUploadStatus.toMutableMap().apply {
+                                set(position, FingerCaptureStatus.NOT_CAPTURED)
+                            }
+                        } ?: currentState.fingerUploadStatus
                     )
                 }
             }
