@@ -33,6 +33,8 @@ class CaptureQueueManagerImpl @Inject constructor(
             request.residentPseudonymId
         )
 
+        Log.d("PENDING_DEBUG", "Found ${pendingCaptures.size} pending: ${pendingCaptures.map { it.fingerType }}")
+
         return if (pendingCaptures.isEmpty()) {
             Log.d(TAG, "No pending captures. Trying single upload.")
             uploadSingle(request)
@@ -84,15 +86,29 @@ class CaptureQueueManagerImpl @Inject constructor(
 
         return when (result) {
             is ApiResult.Success -> {
-                pendingCaptureDao.deleteBySessionId(newRequest.sessionId)
-                Log.d(TAG, "Batch upload succeeded. Cleared ${pendingCaptures.size} pending.")
+                pendingCaptures.forEach { entity ->
+                    pendingCaptureDao.deleteByResidentAndFingerType(
+                        entity.residentPseudonymId,
+                        entity.fingerType
+                    )
+                }
+                Log.d(TAG, "Batch upload succeeded. Cleared ${pendingCaptures.size} pending by resident+fingerType.")
                 ApiResult.Success(result.data)
             }
 
             is ApiResult.Error -> {
                 if (ErrorCodeMapper.behaviorFor(result.code) == ErrorBehavior.TREAT_AS_DUPLICATE_SUCCESS) {
-                    pendingCaptureDao.deleteBySessionId(newRequest.sessionId)
-                    Log.d(TAG, "Batch upload 409 — all fingers already captured. Cleared pending queue.")
+                    pendingCaptures.forEach { entity ->
+                        pendingCaptureDao.deleteByResidentAndFingerType(
+                            entity.residentPseudonymId,
+                            entity.fingerType
+                        )
+                    }
+                    pendingCaptureDao.deleteByResidentAndFingerType(
+                        newRequest.residentPseudonymId,
+                        newRequest.fingerType
+                    )
+                    Log.d(TAG, "Batch upload 409 — all fingers already captured. Cleared pending queue by resident+fingerType.")
                     return ApiResult.Success(emptyList())
                 }
                 Log.w(TAG, "Batch upload failed. Saving new to queue: ${result.message}")
@@ -134,8 +150,13 @@ class CaptureQueueManagerImpl @Inject constructor(
 
             when (result) {
                 is ApiResult.Success -> {
-                    pendingCaptureDao.deleteBySessionId(sessionId)
-                    Log.d(TAG, "Sync: Session $sessionId uploaded successfully.")
+                    retryable.forEach { entity ->
+                        pendingCaptureDao.deleteByResidentAndFingerType(
+                            entity.residentPseudonymId,
+                            entity.fingerType
+                        )
+                    }
+                    Log.d(TAG, "Sync: Session $sessionId uploaded successfully. Cleared ${retryable.size} pending by resident+fingerType.")
                 }
 
                 is ApiResult.Error -> {

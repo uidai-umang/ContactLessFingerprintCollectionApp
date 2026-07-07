@@ -43,6 +43,10 @@ interface PendingCaptureDao {
     @Query("UPDATE pending_captures SET retryCount = retryCount + 1 WHERE sessionId = :sessionId")
     suspend fun incrementRetryCount(sessionId: String)
 
+    // Deletes a single capture by resident + finger — used after successful upload when sessionId may be stale
+    @Query("DELETE FROM pending_captures WHERE residentPseudonymId = :residentId AND fingerType = :fingerType")
+    suspend fun deleteByResidentAndFingerType(residentId: String, fingerType: String)
+
     // Returns count of pending captures — used by WorkManager to decide if work is needed
     @Query("SELECT COUNT(*) FROM pending_captures")
     suspend fun getPendingCount(): Int
