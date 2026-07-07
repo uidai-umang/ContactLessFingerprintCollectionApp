@@ -11,10 +11,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,11 +24,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +42,8 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
@@ -69,6 +76,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import app.gov.uidai.contactlessregistration.SharedViewModel
 import app.gov.uidai.contactlessregistration.model.CLFingerprint
+import app.gov.uidai.contactlessregistration.model.FingerCaptureStatus
 import app.gov.uidai.contactlessregistration.model.FingerPosition
 import app.gov.uidai.contactlessregistration.model.RegistrationUiState
 import app.gov.uidai.contactlessregistration.ui.composable.FingerShape
@@ -256,6 +264,7 @@ fun RegistrationScreen(
             FingerprintSection(
                 fingerprints = uiState.fingerprints,
                 loadingFingerPosition = uiState.loadingFinger,
+                fingerUploadStatus = uiState.fingerUploadStatus,
                 onAddFingerprint = onAddFingerprint,
                 onClickFingerprint = {
                     selectedImage = it
@@ -271,17 +280,6 @@ fun RegistrationScreen(
                 onClick = onSaveRegistration,
                 loadingText = "Saving...",
                 enabled = (uiState.canSave && !uiState.isLoading)
-            )
-
-            // Requirements text
-            Text(
-                text = "Requirements: Name, Phone Number, and 3-5 fingerprints",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
             )
         }
 
@@ -379,9 +377,10 @@ fun PersonalInfoSection(
 fun FingerprintSection(
     fingerprints: Map<FingerPosition, CLFingerprint?>,
     loadingFingerPosition: FingerPosition?,
+    fingerUploadStatus: Map<FingerPosition, FingerCaptureStatus>,
     onAddFingerprint: (FingerPosition) -> Unit,
     onClickFingerprint: (FingerPosition) -> Unit,
-    onRemoveFingerprint: (FingerPosition) -> Unit
+    onRemoveFingerprint: (FingerPosition) -> Unit,
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Left", "Right")
@@ -425,6 +424,7 @@ fun FingerprintSection(
                         0 -> FingerList(
                             items = leftHandFingers,
                             loadingFingerPosition = loadingFingerPosition,
+                            fingerUploadStatus = fingerUploadStatus,
                             onAddFingerprint = onAddFingerprint,
                             onRemoveFingerprint = onRemoveFingerprint,
                             onClickFingerprint = onClickFingerprint
@@ -433,6 +433,7 @@ fun FingerprintSection(
                         1 -> FingerList(
                             items = rightHandFingers,
                             loadingFingerPosition = loadingFingerPosition,
+                            fingerUploadStatus = fingerUploadStatus,
                             onAddFingerprint = onAddFingerprint,
                             onRemoveFingerprint = onRemoveFingerprint,
                             onClickFingerprint = onClickFingerprint
@@ -448,6 +449,7 @@ fun FingerprintSection(
 fun FingerList(
     items: Map<FingerPosition, CLFingerprint?>,
     loadingFingerPosition: FingerPosition?,
+    fingerUploadStatus: Map<FingerPosition, FingerCaptureStatus>,
     onAddFingerprint: (FingerPosition) -> Unit,
     onClickFingerprint: (FingerPosition) -> Unit,
     onRemoveFingerprint: (FingerPosition) -> Unit
@@ -459,6 +461,7 @@ fun FingerList(
             FingerItem(
                 position = item.key,
                 isLoading = (item.key == loadingFingerPosition),
+                uploadStatus = fingerUploadStatus[item.key] ?: FingerCaptureStatus.NOT_CAPTURED,
                 bitmap = item.value?.bitmap,
                 minutiaCount = item.value?.fingerQuality?.getMinutia(),
                 onClick = { onClickFingerprint(item.key) },
@@ -472,6 +475,7 @@ fun FingerList(
 fun FingerItem(
     position: FingerPosition,
     isLoading: Boolean,
+    uploadStatus: FingerCaptureStatus,
     bitmap: Bitmap?,
     minutiaCount: Double?,
     onAdd: () -> Unit,
@@ -480,68 +484,155 @@ fun FingerItem(
     modifier: Modifier = Modifier
 ) {
     val isItemAdded = bitmap != null
+
+    // Click policy per state:
+    // NOT_CAPTURED -> tap to add
+    // CAPTURING / UPLOADING -> busy, no interaction
+    // CAPTURED -> already confirmed by backend, no interaction needed
+    // PENDING / FAILED -> tap to view details (useful for debugging/retry awareness)
+    val isClickable = when (uploadStatus) {
+        FingerCaptureStatus.NOT_CAPTURED -> !isLoading
+        FingerCaptureStatus.CAPTURING, FingerCaptureStatus.UPLOADING, FingerCaptureStatus.CAPTURED -> false
+        FingerCaptureStatus.PENDING, FingerCaptureStatus.FAILED -> isItemAdded
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(
+                enabled = isClickable,
                 onClick = {
-                    if (isItemAdded) onClick() else onAdd()
-                })
-            .padding(8.dp),
+                    when (uploadStatus) {
+                        FingerCaptureStatus.NOT_CAPTURED -> onAdd()
+                        FingerCaptureStatus.PENDING, FingerCaptureStatus.FAILED -> if (isItemAdded) onClick()
+                        else -> {}
+                    }
+                }
+            )
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Image Placeholder or Loaded Image
         Box(
             modifier = Modifier
-                .size(72.dp),
+                .size(36.dp)
+                .clip(CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            if (bitmap != null) {
-                // If an image is available, display it
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
-                    modifier = Modifier
-                        .height(72.dp)
-                        .width(56.dp)
-                        .clip(FingerShape())
-                )
-            } else if (!isLoading) {
-                // Otherwise, show add button
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                )
-            } else {
-                CircularProgressIndicator()
+            when {
+                uploadStatus == FingerCaptureStatus.UPLOADING -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFFFF3E0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFFFF9800)
+                        )
+                    }
+                }
+
+                uploadStatus == FingerCaptureStatus.PENDING -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFFFF3E0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Pending sync",
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                uploadStatus == FingerCaptureStatus.FAILED -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFFFEBEE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Failed",
+                            tint = Color(0xFFE53935),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                isItemAdded || uploadStatus == FingerCaptureStatus.CAPTURED -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF4CAF50)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Captured",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                uploadStatus == FingerCaptureStatus.CAPTURING -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    }
+                }
+
+                else -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add ${position.name.replace('_', ' ')}"
+                        )
+                    }
+                }
             }
         }
 
-        Spacer(8.dp)
+        Spacer(modifier = Modifier.width(16.dp))
 
-        // Dynamic Text
-        val displayText = if (minutiaCount != null) {
-            "Minutia Count: ${minutiaCount.toInt()}"
-        } else if (isItemAdded){
-            position.name.replace('_', ' ')
-        } else if (!isLoading) {
-            "Add ${position.name.replace('_', ' ')}"
-        } else {
-            "Capturing..."
+        val displayText = when {
+            uploadStatus == FingerCaptureStatus.UPLOADING -> "Uploading..."
+            uploadStatus == FingerCaptureStatus.PENDING -> "Pending sync"
+            uploadStatus == FingerCaptureStatus.FAILED -> "Upload failed"
+            minutiaCount != null -> "Minutia Count: ${minutiaCount.toInt()}"
+            isItemAdded || uploadStatus == FingerCaptureStatus.CAPTURED ->
+                position.name.replace('_', ' ')
+            !isLoading -> "Add ${position.name.replace('_', ' ')}"
+            else -> "Capturing..."
         }
 
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (minutiaCount != null) {
                 Text(
                     text = position.name.replace('_', ' '),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
             Text(
-                text = displayText, style = MaterialTheme.typography.bodyLarge
+                text = displayText,
+                style = MaterialTheme.typography.bodyLarge
             )
         }
     }
