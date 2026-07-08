@@ -9,6 +9,7 @@ import app.gov.uidai.contactlessregistration.model.FingerPosition
 import app.gov.uidai.contactlessregistration.model.SharedUiState
 import app.gov.uidai.contactlessregistration.model.User
 import app.gov.uidai.contactlessregistration.repository.FileRepository
+import app.gov.uidai.contactlessregistration.usecase.CaptureQueueManager
 import app.gov.uidai.contactlessregistration.usecase.impl.UserUseCaseImpl
 import app.gov.uidai.contactlessregistration.usecase.UIDManager
 import app.gov.uidai.contactlessregistration.usecase.UserUseCase
@@ -30,12 +31,19 @@ class SharedViewModel @Inject constructor(
     private val fileRepository: FileRepository,
     private val uidManager: UIDManager,
     private val fingerEmbedder: FingerEmbedder,
+    private val captureQueueManager: CaptureQueueManager
 ) : ViewModel() {
 
     private var initJob: Job? = null
 
     private val _uiState = MutableStateFlow(SharedUiState())
     val uiState = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            captureQueueManager.syncPendingCaptures()
+        }
+    }
 
     fun initialize(context: Context) {
         initJob?.cancel()
