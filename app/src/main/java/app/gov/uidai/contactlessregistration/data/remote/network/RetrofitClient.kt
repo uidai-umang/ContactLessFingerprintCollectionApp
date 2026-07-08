@@ -17,7 +17,9 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val TIMEOUT_SECONDS = 30L
+    private const val CONNECT_TIMEOUT_SECONDS = 15L
+    private const val READ_TIMEOUT_SECONDS = 60L
+    private const val WRITE_TIMEOUT_SECONDS = 60L
 
     // Provides a single reusable Gson instance across the app.
     // Centralizing this makes it easy to add date formats or
@@ -51,9 +53,9 @@ object RetrofitClient {
     // Release builds get a clean client with no logging overhead.
     fun buildOkHttpClient(context: Context): OkHttpClient {
         val builder = OkHttpClient.Builder()
-            .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
         if (BuildConfig.DEBUG) {
             builder

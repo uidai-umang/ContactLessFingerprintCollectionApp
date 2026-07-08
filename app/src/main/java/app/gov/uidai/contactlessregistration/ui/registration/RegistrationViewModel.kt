@@ -3,6 +3,7 @@ package app.gov.uidai.contactlessregistration.ui.registration
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.gov.uidai.contactlessregistration.data.dao.PendingCaptureDao
 import app.gov.uidai.contactlessregistration.data.remote.network.ApiResult
 import app.gov.uidai.contactlessregistration.model.CLFingerprint
 import app.gov.uidai.contactlessregistration.model.FingerCaptureStatus
@@ -33,7 +34,8 @@ class RegistrationViewModel @Inject constructor(
     private val fileRepository: FileRepository,
     private val residentUseCase: ResidentUseCase,
     private val sessionUseCase: SessionUseCase,
-    private val captureQueueManager: CaptureQueueManager
+    private val captureQueueManager: CaptureQueueManager,
+    private val pendingCaptureDao: PendingCaptureDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrationUiState())
@@ -70,20 +72,30 @@ class RegistrationViewModel @Inject constructor(
                     val response = result.data
                     currentResidentId = response.residentPseudonymId
 
+                    // Backend truth: what's confirmed captured/pending on the server
                     val capturedFingers = response.capturedFingers.mapNotNull { name ->
                         FingerPosition.entries.find { it.name == name }
                     }
-
-                    val pendingFingers = response.pendingUploads.mapNotNull { name ->
+                    val backendPendingFingers = response.pendingUploads.mapNotNull { name ->
                         FingerPosition.entries.find { it.name == name }
                     }
 
-                    val backendStatusMap = FingerPosition.entries
+                    // Local truth: captures sitting in Room, never reached backend yet
+                    // (e.g. app was closed mid-session before upload succeeded)
+                    val localPendingEntries = pendingCaptureDao.getByResidentId(response.residentPseudonymId)
+                    val localPendingFingers = localPendingEntries.mapNotNull { entity ->
+                        FingerPosition.entries.find { it.name == entity.fingerType }
+                    }
+
+                    // Merge: local pending takes priority over "not captured" —
+                    // operator already captured it, just hasn't synced yet
+                    val uploadStatusMap = FingerPosition.entries
                         .filter { it != FingerPosition.UNKNOWN }
                         .associateWith { position ->
-                            when(position) {
-                                in capturedFingers -> FingerCaptureStatus.CAPTURED
-                                in pendingFingers -> FingerCaptureStatus.PENDING
+                            when {
+                                position in capturedFingers -> FingerCaptureStatus.CAPTURED
+                                position in backendPendingFingers -> FingerCaptureStatus.PENDING
+                                position in localPendingFingers -> FingerCaptureStatus.PENDING
                                 else -> FingerCaptureStatus.NOT_CAPTURED
                             }
                         }
@@ -94,7 +106,7 @@ class RegistrationViewModel @Inject constructor(
                             residentPseudonymId = response.residentPseudonymId,
                             totalCaptured = response.totalCaptured,
                             isComplete = response.isComplete,
-                            fingerUploadStatus = backendStatusMap
+                            fingerUploadStatus = uploadStatusMap
                         )
                     }
 
