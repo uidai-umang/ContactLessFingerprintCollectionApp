@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "349566041989",
+    "project_id": "contactlessfingerprintapp",
+    "storage_bucket": "contactlessfingerprintapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:349566041989:android:9225aefb5177032da28eec",
+        "android_client_info": {
+          "package_name": "in.gov.uidai.contactlessregistration"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsEr0XtGF6PwnZPck7RX3uEyt7ZMXOgfk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
