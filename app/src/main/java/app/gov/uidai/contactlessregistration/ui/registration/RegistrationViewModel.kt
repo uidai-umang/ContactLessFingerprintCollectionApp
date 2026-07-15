@@ -205,7 +205,10 @@ class RegistrationViewModel @Inject constructor(
                 viewModelScope.launch {
                     uploadCapture(
                         fingerPosition = data.fingerPosition,
-                        imageBytes = data.imageBytes
+                        imageBytes = data.imageBytes,
+                        blurScore = data.blurScore,
+                        brightnessScore = data.brightnessScore,
+                        glareScore = data.glareScore
                     )
                 }
             }
@@ -228,7 +231,10 @@ class RegistrationViewModel @Inject constructor(
 
     private suspend fun uploadCapture(
         fingerPosition: FingerPosition,
-        imageBytes: ByteArray
+        imageBytes: ByteArray,
+        blurScore: Double = 0.0,
+        brightnessScore: Double = 0.0,
+        glareScore: Double = 0.0
     ) {
         val hand = if (fingerPosition.name.startsWith("LEFT")) "LEFT" else "RIGHT"
 
@@ -239,7 +245,10 @@ class RegistrationViewModel @Inject constructor(
             fingerType = fingerPosition.name,
             hand = hand,
             imageBytes = imageBytes,
-            deviceModel = Build.MODEL
+            deviceModel = Build.MODEL,
+            blurScore = blurScore,
+            brightnessScore = brightnessScore,
+            glareScore = glareScore
         )
 
         val result = captureQueueManager.uploadOrQueue(request)

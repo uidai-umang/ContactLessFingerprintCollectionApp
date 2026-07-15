@@ -16,7 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-
 class FingerSDKManagerImpl (
     private val context: Context,
     private val fingerEmbedder: FingerEmbedder
@@ -104,12 +103,18 @@ class FingerSDKManagerImpl (
                     val responseExtra = data?.getStringExtra(RESPONSE_KEY)
                     Log.d(TAG, "SDK Response - Extra: $responseExtra")
 
+                    val (blurScore, brightnessScore, glareScore) = parseScoresFromResponseXml(responseExtra)
+
+
                     if (base64String != null) {
-                        extractFingerprintFromResponse(base64String)
-                    } else {
-                        listener?.onResult(
-                            SDKResult.Error("No response received from SDK")
+                        extractFingerprintFromResponse(
+                            response = base64String,
+                            blurScore = blurScore,
+                            brightnessScore = brightnessScore,
+                            glareScore = glareScore
                         )
+                    } else {
+                        listener?.onResult(SDKResult.Error("No response received from SDK"))
                     }
                 }
 
@@ -145,6 +150,17 @@ class FingerSDKManagerImpl (
         }
     }
 
+    private fun parseScoresFromResponseXml(xml: String?): Triple<Double, Double, Double> {
+        if (xml == null) return Triple(0.0, 0.0, 0.0)
+        fun extractAttr(name: String): Double =
+            Regex("""$name="([\d.]+)"""").find(xml)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
+        return Triple(
+            extractAttr("blurScore"),
+            extractAttr("brightnessScore"),
+            extractAttr("glareScore")
+        )
+    }
+
     private fun buildSdkRequest(
         txnId: String,
         purpose: String,
@@ -165,7 +181,12 @@ class FingerSDKManagerImpl (
                 "</PidOptions>".trimIndent()
     }
 
-    private suspend fun extractFingerprintFromResponse(response: String) {
+    private suspend fun extractFingerprintFromResponse(
+        response: String,
+        blurScore: Double,
+        brightnessScore: Double,
+        glareScore: Double
+    ) {
         withContext(Dispatchers.Default) {
             val bitmap = response.toBitmap()
             val jp2ByteArray = bitmapToJp2(bitmap)
@@ -179,7 +200,10 @@ class FingerSDKManagerImpl (
                             bitmap = bitmap,
                             embedding = embedding,
                             fingerQuality = fingerQuality,
-                            jp2ByteArray = jp2ByteArray
+                            jp2ByteArray = jp2ByteArray,
+                            blurScore = blurScore,
+                            brightnessScore = brightnessScore,
+                            glareScore = glareScore
                         )
                     )
                 )
