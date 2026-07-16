@@ -3,6 +3,8 @@ package app.gov.uidai.contactlessregistration.data.remote.api
 import app.gov.uidai.contactlessregistration.model.capture.BatchCaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureResponse
+import app.gov.uidai.contactlessregistration.model.device.DeviceRegistrationRequest
+import app.gov.uidai.contactlessregistration.model.device.DeviceRegistrationResponse
 import app.gov.uidai.contactlessregistration.model.resident.ResidentLookupRequest
 import app.gov.uidai.contactlessregistration.model.resident.ResidentLookupResponse
 import app.gov.uidai.contactlessregistration.model.session.CloseSessionRequest
@@ -47,4 +49,9 @@ interface ClfApiService {
         @Part images: List<MultipartBody.Part>,
         @PartMap metadata: Map<String, @JvmSuppressWildcards RequestBody>
     ): Response<List<CaptureResponse>>
+
+    @POST(Urls.DEVICE_REGISTER)
+    suspend fun registerDevice(
+        @Body request: DeviceRegistrationRequest
+    ): Response<DeviceRegistrationResponse>
 }

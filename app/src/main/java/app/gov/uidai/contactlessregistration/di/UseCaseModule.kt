@@ -7,6 +7,7 @@ import app.gov.uidai.contactlessregistration.repository.FingerprintRepository
 import app.gov.uidai.contactlessregistration.repository.UserRepository
 import app.gov.uidai.contactlessregistration.usecase.CaptureQueueManager
 import app.gov.uidai.contactlessregistration.usecase.CaptureUseCase
+import app.gov.uidai.contactlessregistration.usecase.DeviceUseCase
 import app.gov.uidai.contactlessregistration.usecase.FingerSDKManager
 import app.gov.uidai.contactlessregistration.usecase.ResidentUseCase
 import app.gov.uidai.contactlessregistration.usecase.SessionUseCase
@@ -14,6 +15,7 @@ import app.gov.uidai.contactlessregistration.usecase.UIDManager
 import app.gov.uidai.contactlessregistration.usecase.UserUseCase
 import app.gov.uidai.contactlessregistration.usecase.impl.CaptureQueueManagerImpl
 import app.gov.uidai.contactlessregistration.usecase.impl.CaptureUseCaseImpl
+import app.gov.uidai.contactlessregistration.usecase.impl.DeviceUseCaseImpl
 import app.gov.uidai.contactlessregistration.usecase.impl.FingerSDKManagerImpl
 import app.gov.uidai.contactlessregistration.usecase.impl.ResidentUseCaseImpl
 import app.gov.uidai.contactlessregistration.usecase.impl.SessionUseCaseImpl
@@ -93,5 +95,13 @@ object UseCaseModule {
     ): CaptureQueueManager = CaptureQueueManagerImpl(
         captureUseCase = captureUseCase,
         pendingCaptureDao = pendingCaptureDao
+    )
+
+    @Provides
+    @Singleton
+    fun provideDeviceUseCase(
+        clfRepository: ClfRepository
+    ): DeviceUseCase = DeviceUseCaseImpl(
+        clfRepository = clfRepository
     )
 }

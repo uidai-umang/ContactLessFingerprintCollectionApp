@@ -16,4 +16,5 @@ class ContactlessRegistrationApplication : Application(), Configuration.Provider
     get() = Configuration.Builder()
         .setWorkerFactory(workerFactory)
         .build()
+
 }

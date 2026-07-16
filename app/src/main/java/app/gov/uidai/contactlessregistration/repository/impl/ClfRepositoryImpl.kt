@@ -9,6 +9,8 @@ import app.gov.uidai.contactlessregistration.data.remote.network.ResponseHandler
 import app.gov.uidai.contactlessregistration.model.capture.BatchCaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureResponse
+import app.gov.uidai.contactlessregistration.model.device.DeviceRegistrationRequest
+import app.gov.uidai.contactlessregistration.model.device.DeviceRegistrationResponse
 import app.gov.uidai.contactlessregistration.model.resident.ResidentLookupRequest
 import app.gov.uidai.contactlessregistration.model.resident.ResidentLookupResponse
 import app.gov.uidai.contactlessregistration.model.session.CloseSessionRequest
@@ -55,5 +57,11 @@ class ClfRepositoryImpl @Inject constructor(
             images = requests.map { buildImagePart(it.imageBytes, it.fingerType) },
             metadata = buildBatchMetadataParts(requests)
         )
+    }
+
+    override suspend fun registerDevice(
+        request: DeviceRegistrationRequest
+    ): ApiResult<DeviceRegistrationResponse>  = ResponseHandler.safeApiCall {
+        apiService.registerDevice(request)
     }
 }

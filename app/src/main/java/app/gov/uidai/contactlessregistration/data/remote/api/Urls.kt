@@ -6,4 +6,6 @@ object Urls {
     const val SESSION_CLOSE = "api/v1/sessions/close"
     const val CAPTURE_UPLOAD = "api/v1/captures"
     const val CAPTURE_BATCH_UPLOAD = "api/v1/captures/batch"
+
+    const val DEVICE_REGISTER = "api/v1/devices/register"
 }

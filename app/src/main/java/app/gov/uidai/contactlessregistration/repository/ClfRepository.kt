@@ -4,6 +4,8 @@ import app.gov.uidai.contactlessregistration.data.remote.network.ApiResult
 import app.gov.uidai.contactlessregistration.model.capture.BatchCaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureResponse
+import app.gov.uidai.contactlessregistration.model.device.DeviceRegistrationRequest
+import app.gov.uidai.contactlessregistration.model.device.DeviceRegistrationResponse
 import app.gov.uidai.contactlessregistration.model.resident.ResidentLookupRequest
 import app.gov.uidai.contactlessregistration.model.resident.ResidentLookupResponse
 import app.gov.uidai.contactlessregistration.model.session.CloseSessionRequest
@@ -31,4 +33,8 @@ interface ClfRepository {
     suspend fun uploadBatchCaptures(
         requests: List<CaptureRequest>
     ): ApiResult<List<CaptureResponse>>
+
+    suspend fun registerDevice(
+        request: DeviceRegistrationRequest
+    ): ApiResult<DeviceRegistrationResponse>
 }
