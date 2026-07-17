@@ -2,6 +2,7 @@ package app.gov.uidai.contactlessregistration.usecase.impl
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import app.gov.uidai.contactlessregistration.utils.camera.CameraSpecManager
 import app.gov.uidai.contactlessregistration.data.remote.network.ApiResult
@@ -23,10 +24,18 @@ class DeviceUseCaseImpl @Inject constructor(
         val cameraSpec = CameraSpecManager.fetch(context)
             ?: return ApiResult.Error("Unable to read camera characteristics", -1)
 
+        val deviceFingerprint = Build.FINGERPRINT.let {
+            java.security.MessageDigest.getInstance("SHA-256")
+                .digest(it.toByteArray(Charsets.UTF_8))
+                .joinToString("") { b -> "%02x".format(b) }
+        }
+
+        Log.d("DeviceReg", "fingerprintHash len=${cameraSpec.fingerprintHash.length}, deviceFingerprint len=${Build.FINGERPRINT.length}")
+
         val request = DeviceRegistrationRequest(
             operatorId = operatorId,
             androidId = androidId,
-            deviceFingerprint = Build.FINGERPRINT,
+            deviceFingerprint = deviceFingerprint,
             deviceModel = Build.MODEL,
             deviceManufacturer = Build.MANUFACTURER,
             osVersion = Build.VERSION.RELEASE,
