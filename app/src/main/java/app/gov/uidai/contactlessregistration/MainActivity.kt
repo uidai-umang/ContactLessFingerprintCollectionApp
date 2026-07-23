@@ -29,18 +29,12 @@ import app.gov.uidai.contactlessregistration.ui.theme.md_theme_scrim
 import app.gov.uidai.contactlessregistration.ui.theme.md_theme_surface
 import app.gov.uidai.contactlessregistration.ui.uidentry.UidEntryRoute
 import app.gov.uidai.contactlessregistration.usecase.DeviceUseCase
+import app.gov.uidai.contactlessregistration.utils.Routes
 import app.gov.uidai.contactlessregistration.utils.device.DeviceRegistrationGate
 import app.gov.uidai.contactlessregistration.utils.worker.CaptureWorkScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 import kotlinx.coroutines.launch
-
-// Route constants — replaces the XML nav graph's IDs/Safe Args
-object Routes {
-    const val UID_ENTRY = "uid_entry"
-    const val REGISTRATION = "registration/{uidHash}"
-    fun registration(uidHash: String) = "registration/$uidHash"
-}
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -98,21 +92,21 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val sharedUiState by sharedViewModel.uiState.collectAsStateWithLifecycle()
 
-                NavHost(navController = navController, startDestination = Routes.UID_ENTRY) {
-                    composable(Routes.UID_ENTRY) {
+                NavHost(navController = navController, startDestination = Routes.UidEntry.route) {
+                    composable(Routes.UidEntry.route) {
                         UidEntryRoute(
                             sharedUiState = sharedUiState,
                             onClearSharedMessage = sharedViewModel::clearError,
                             onNavigateToRegistration = { uidHash ->
-                                navController.navigate(Routes.registration(uidHash))
+                                navController.navigate(Routes.Registration.createRoute(uidHash))
                             }
                         )
                     }
                     composable(
-                        route = Routes.REGISTRATION,
-                        arguments = listOf(navArgument("uidHash") { type = NavType.StringType })
+                        route = Routes.Registration.route,
+                        arguments = listOf(navArgument(Routes.ARG_UID_HASH) { type = NavType.StringType })
                     ) { backStackEntry ->
-                        val uidHash = backStackEntry.arguments?.getString("uidHash").orEmpty()
+                        val uidHash = backStackEntry.arguments?.getString(Routes.ARG_UID_HASH).orEmpty()
                         RegistrationRoute(
                             uidHash = uidHash,
                             sharedUiState = sharedUiState,
