@@ -1,10 +1,6 @@
 package app.gov.uidai.contactlessregistration.ui.uidentry
 
-import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -45,7 +41,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextRange
@@ -55,108 +50,56 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.fragment.findNavController
 import app.gov.uidai.contactlessregistration.R
-import app.gov.uidai.contactlessregistration.SharedViewModel
+import app.gov.uidai.contactlessregistration.model.SharedUiState
 import app.gov.uidai.contactlessregistration.model.UIDEntryUiState
 import app.gov.uidai.contactlessregistration.ui.composable.LoadingDialog
 import app.gov.uidai.contactlessregistration.ui.theme.AppButton
-import app.gov.uidai.contactlessregistration.ui.theme.AttendanceAppTheme
 import app.gov.uidai.contactlessregistration.ui.theme.CheckboxRow
 import app.gov.uidai.contactlessregistration.ui.theme.Spacer
-import dagger.hilt.android.AndroidEntryPoint
-import java.util.UUID
 
-@AndroidEntryPoint
-class UidEntryFragment : Fragment() {
+@Composable
+fun UidEntryRoute(
+    sharedUiState: SharedUiState,
+    onClearSharedMessage: () -> Unit,
+    onNavigateToRegistration: (uidHash: String) -> Unit,
+    viewModel: UIDEntryViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    companion object {
-        private val TAG = UidEntryFragment::class.simpleName
-    }
-
-    private val viewModel: UIDEntryViewModel by viewModels()
-    private val sharedViewModel: SharedViewModel by activityViewModels()
-
-    override fun onResume() {
-        super.onResume()
+    LaunchedEffect(Unit) {
         viewModel.checkRegistration(isCheckingFromOnResume = true)
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        val txnId = UUID.randomUUID().toString()
-        val snackbarHostState = SnackbarHostState()
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { paddingValues ->
+        UidEntryScreen(
+            uiState = uiState,
+            onUidChanged = viewModel::onUIDChanged,
+            onRememberMeCheckChanged = viewModel::onRememberMeChanged,
+            onNavigateToRegistration = {
+                onNavigateToRegistration(viewModel.getCurrentUidHash())
+            },
+            onNavigateToMatchFingers = { /* UserInfoFragment out of scope per your instruction */ },
+            paddingValues = paddingValues
+        )
+        LoadingDialog(sharedUiState.isLoadingAssets, "Loading Assets ...")
+        LoadingDialog(sharedUiState.isLoadingEmbedder, "Initializing Embedder...")
 
-        val onShowToast: suspend (String) -> Unit = { message ->
-            snackbarHostState.showSnackbar(message, withDismissAction = true)
-            sharedViewModel.clearError()
-            viewModel.clearMessage()
+        LaunchedEffect(sharedUiState.message) {
+            sharedUiState.message?.let {
+                snackbarHostState.showSnackbar(it, withDismissAction = true)
+                onClearSharedMessage()
+            }
         }
-
-        return ComposeView(requireContext()).apply {
-            setContent {
-                AttendanceAppTheme {
-                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    val sharedUiState by sharedViewModel.uiState.collectAsStateWithLifecycle()
-
-                    Scaffold(
-                        snackbarHost = {
-                            SnackbarHost(
-                                hostState = snackbarHostState
-                            )
-                        }
-                    ) { paddingValues ->
-                        Box {
-                            UidEntryScreen(
-                                uiState = uiState,
-                                onUidChanged = viewModel::onUIDChanged,
-                                onRememberMeCheckChanged = viewModel::onRememberMeChanged,
-                                onNavigateToRegistration = {
-                                    val uidHash = viewModel.getCurrentUidHash()
-                                    val action =
-                                        UidEntryFragmentDirections.actionUidEntryToRegistration(uidHash)
-                                    findNavController().navigate(action)
-                                },
-                                onNavigateToMatchFingers = {
-                                    val uidHash = viewModel.getCurrentUidHash()
-                                    val action =
-                                        UidEntryFragmentDirections.actionUidEntryToUserInfo(uidHash)
-                                    findNavController().navigate(action)
-                                },
-                                paddingValues = paddingValues
-                            )
-                            LoadingDialog(
-                                sharedUiState.isLoadingAssets,
-                                "Loading Assets ..."
-                            )
-                            LoadingDialog(
-                                sharedUiState.isLoadingEmbedder,
-                                "Initializing Embedder..."
-                            )
-
-                            // Handle shared error messages
-                            LaunchedEffect(sharedUiState.message) {
-                                sharedUiState.message?.let { error ->
-                                    onShowToast(error)
-                                }
-                            }
-
-                            // Handle ui error messages
-                            LaunchedEffect(uiState.message) {
-                                uiState.message?.let { error ->
-                                    onShowToast(error)
-                                }
-                            }
-                        }
-                    }
-                }
+        LaunchedEffect(uiState.message) {
+            uiState.message?.let {
+                snackbarHostState.showSnackbar(it, withDismissAction = true)
+                viewModel.clearMessage()
             }
         }
     }

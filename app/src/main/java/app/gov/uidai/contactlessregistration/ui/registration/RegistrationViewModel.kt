@@ -1,6 +1,8 @@
 package app.gov.uidai.contactlessregistration.ui.registration
 
+import android.content.Intent
 import android.os.Build
+import androidx.activity.result.ActivityResultLauncher
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.gov.uidai.contactlessregistration.data.dao.PendingCaptureDao
@@ -15,6 +17,7 @@ import app.gov.uidai.contactlessregistration.model.User
 import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
 import app.gov.uidai.contactlessregistration.repository.FileRepository
 import app.gov.uidai.contactlessregistration.usecase.CaptureQueueManager
+import app.gov.uidai.contactlessregistration.usecase.FingerSDKManager
 import app.gov.uidai.contactlessregistration.usecase.ResidentUseCase
 import app.gov.uidai.contactlessregistration.usecase.SessionUseCase
 import app.gov.uidai.contactlessregistration.usecase.UserUseCase
@@ -35,7 +38,8 @@ class RegistrationViewModel @Inject constructor(
     private val residentUseCase: ResidentUseCase,
     private val sessionUseCase: SessionUseCase,
     private val captureQueueManager: CaptureQueueManager,
-    private val pendingCaptureDao: PendingCaptureDao
+    private val pendingCaptureDao: PendingCaptureDao,
+    private val sdkManager: FingerSDKManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrationUiState())
@@ -51,6 +55,9 @@ class RegistrationViewModel @Inject constructor(
     private val testDeviceId = "00000000-0000-0000-0000-000000000002"
     private val testCentreId = "00000000-0000-0000-0000-000000000003"
 
+    init {
+        sdkManager.setResultListener { result -> onSDKResult(result) }
+    }
     fun setUidHash(uidHash: String) {
         currentUidHash = uidHash
         lookupResidentAndCreateSession()
@@ -381,6 +388,19 @@ class RegistrationViewModel @Inject constructor(
                 }
             }
         }
+
+    fun handleSdkActivityResult(resultCode: Int, data: Intent?) {
+        viewModelScope.launch {
+            sdkManager.parseResponse(resultCode, data)
+        }
+    }
+
+    fun captureFingerprint(fingerPosition: FingerPosition, launcher: ActivityResultLauncher<Intent>) {
+        startFingerprintCapture(fingerPosition) {
+            sdkManager.captureFingerprint(activityResultLauncher = launcher, purpose = "register")
+        }
+    }
+
 
     fun clearError() {
         _uiState.update {

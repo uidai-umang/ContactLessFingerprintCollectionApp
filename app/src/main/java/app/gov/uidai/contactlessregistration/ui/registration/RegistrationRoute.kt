@@ -2,10 +2,7 @@ package app.gov.uidai.contactlessregistration.ui.registration
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.Image
@@ -19,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,29 +27,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,166 +38,89 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
-import app.gov.uidai.contactlessregistration.SharedViewModel
+import androidx.lifecycle.viewModelScope
 import app.gov.uidai.contactlessregistration.model.CLFingerprint
 import app.gov.uidai.contactlessregistration.model.FingerCaptureStatus
 import app.gov.uidai.contactlessregistration.model.FingerPosition
 import app.gov.uidai.contactlessregistration.model.RegistrationUiState
-import app.gov.uidai.contactlessregistration.ui.composable.FingerShape
+import app.gov.uidai.contactlessregistration.model.SharedUiState
 import app.gov.uidai.contactlessregistration.ui.composable.LoadingDialog
 import app.gov.uidai.contactlessregistration.ui.theme.AppButton
-import app.gov.uidai.contactlessregistration.ui.theme.AttendanceAppTheme
 import app.gov.uidai.contactlessregistration.ui.theme.Spacer
 import app.gov.uidai.contactlessregistration.usecase.FingerSDKManager
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
-@AndroidEntryPoint
-class RegistrationFragment : Fragment() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RegistrationRoute(
+    uidHash: String,
+    sharedUiState: SharedUiState,
+    onNavigateUp: () -> Unit,
+    viewModel: RegistrationViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val registrationResult by viewModel.registrationResult.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-    private val args: RegistrationFragmentArgs by navArgs()
-    private val viewModel: RegistrationViewModel by viewModels()
-    private val sharedViewModel: SharedViewModel by activityViewModels()
-
-    @Inject
-    lateinit var sdkManager: FingerSDKManager
-
-    // Activity result launcher for SDK
-    private val sdkLauncher = registerForActivityResult(
+    val sdkLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        lifecycleScope.launch {
-            sdkManager.parseResponse(result.resultCode, result.data)
-        }
+    ) { result -> viewModel.handleSdkActivityResult(result.resultCode, result.data) }
+
+    LaunchedEffect(Unit) {
+        viewModel.setUidHash(uidHash)
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View {
-        sdkManager.setResultListener { result ->
-            viewModel.onSDKResult(result)
-        }
-
-        // Set UID hash in ViewModel
-        viewModel.setUidHash(args.uidHash)
-
-        val txnId = UUID.randomUUID().toString()
-        val snackbarHostState = SnackbarHostState()
-
-        val onShowToast: suspend (String) -> Unit = { message ->
-            snackbarHostState.showSnackbar(message, withDismissAction = true)
-            viewModel.clearError()
-        }
-
-        return ComposeView(requireContext()).apply {
-            setContent {
-                AttendanceAppTheme {
-                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    val registrationResult by viewModel.registrationResult.collectAsStateWithLifecycle()
-                    val sharedUiState by sharedViewModel.uiState.collectAsStateWithLifecycle()
-
-                    Scaffold(
-                        topBar = {
-                            TopAppBar(
-                                title = {
-                                    Text("Registration", maxLines = 1)
-                                },
-                                navigationIcon = {
-                                    IconButton(onClick = {
-                                        findNavController().navigateUp()
-                                    }) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                            contentDescription = "Go Back"
-                                        )
-                                    }
-                                }
-                            )
-                        },
-                        snackbarHost = {
-                            SnackbarHost(
-                                hostState = snackbarHostState, modifier = Modifier
-                            )
-                        }) { paddingValues ->
-                        val keyboardController = LocalSoftwareKeyboardController.current
-
-                        RegistrationScreen(
-                            uiState = uiState,
-                            onNameChanged = viewModel::onNameChanged,
-                            onPhoneNumberChanged = viewModel::onPhoneNumberChanged,
-                            onAddFingerprint = {
-                                keyboardController?.hide()
-                                viewModel.startFingerprintCapture(
-                                    fingerPosition = it,
-                                    launchSdk = {
-                                        sdkManager.captureFingerprint(
-                                            activityResultLauncher = sdkLauncher,
-                                            purpose = "register"
-                                        )
-                                    }
-                                )
-                            },
-                            onRemoveFingerprint = viewModel::removeFingerprint,
-                            onSaveRegistration = viewModel::registerUser,
-                            paddingValues = paddingValues
-                        )
-                        LoadingDialog(
-                            sharedUiState.isLoadingEmbedder,
-                            "Initializing Embedder..."
-                        )
-
-                        // Handle shared error messages
-                        LaunchedEffect(sharedUiState.message) {
-                            sharedUiState.message?.let { error ->
-                                onShowToast(error)
-                            }
-                        }
-
-                        // Handle ui error messages
-                        LaunchedEffect(uiState.message) {
-                            uiState.message?.let { error ->
-                                onShowToast(error)
-                            }
-                        }
-
-                        // Handle registration saved
-                        LaunchedEffect(registrationResult) {
-                            when (registrationResult) {
-                                is RegistrationResult.Success -> {
-                                    onShowToast("Registration completed successfully!")
-                                    keyboardController?.hide()
-                                    findNavController().navigateUp()
-                                }
-
-                                is RegistrationResult.Error -> {
-                                    val message =
-                                        (registrationResult as RegistrationResult.Error).message
-                                    onShowToast(message)
-                                }
-
-                                else -> {
-
-                                }
-                            }
-                        }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Registration", maxLines = 1) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go Back")
                     }
                 }
+            )
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { paddingValues ->
+        RegistrationScreen(
+            uiState = uiState,
+            onNameChanged = viewModel::onNameChanged,
+            onPhoneNumberChanged = viewModel::onPhoneNumberChanged,
+            onAddFingerprint = {
+                keyboardController?.hide()
+                viewModel.captureFingerprint(it, sdkLauncher)
+            },
+            onRemoveFingerprint = viewModel::removeFingerprint,
+            onSaveRegistration = viewModel::registerUser,
+            paddingValues = paddingValues
+        )
+        LoadingDialog(sharedUiState.isLoadingEmbedder, "Initializing Embedder...")
+
+        LaunchedEffect(uiState.message) {
+            uiState.message?.let {
+                snackbarHostState.showSnackbar(it, withDismissAction = true)
+                viewModel.clearError()
+            }
+        }
+        LaunchedEffect(registrationResult) {
+            when (registrationResult) {
+                is RegistrationResult.Success -> {
+                    snackbarHostState.showSnackbar("Registration completed successfully!")
+                    keyboardController?.hide()
+                    onNavigateUp()
+                }
+                is RegistrationResult.Error -> {
+                    snackbarHostState.showSnackbar((registrationResult as RegistrationResult.Error).message)
+                }
+                else -> {}
             }
         }
     }
