@@ -10,7 +10,6 @@ import app.gov.uidai.contactlessregistration.model.SharedUiState
 import app.gov.uidai.contactlessregistration.model.User
 import app.gov.uidai.contactlessregistration.repository.FileRepository
 import app.gov.uidai.contactlessregistration.usecase.CaptureQueueManager
-import app.gov.uidai.contactlessregistration.usecase.impl.UserUseCaseImpl
 import app.gov.uidai.contactlessregistration.usecase.UIDManager
 import app.gov.uidai.contactlessregistration.usecase.UserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel

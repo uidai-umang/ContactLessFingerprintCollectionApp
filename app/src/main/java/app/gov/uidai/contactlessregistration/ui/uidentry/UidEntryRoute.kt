@@ -232,7 +232,7 @@ fun UidEntryUI(
                     text = filtered,
                     selection = TextRange(filtered.length) // cursor always at end
                 )
-                if(filtered != value){
+                if (filtered != value) {
                     onValueChange(filtered)
                 }
             },

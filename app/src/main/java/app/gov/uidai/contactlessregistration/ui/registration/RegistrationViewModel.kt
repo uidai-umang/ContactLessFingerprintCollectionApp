@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import kotlin.collections.set
 
 @HiltViewModel
 class RegistrationViewModel @Inject constructor(
@@ -58,6 +57,7 @@ class RegistrationViewModel @Inject constructor(
     init {
         sdkManager.setResultListener { result -> onSDKResult(result) }
     }
+
     fun setUidHash(uidHash: String) {
         currentUidHash = uidHash
         lookupResidentAndCreateSession()
@@ -89,7 +89,8 @@ class RegistrationViewModel @Inject constructor(
 
                     // Local truth: captures sitting in Room, never reached backend yet
                     // (e.g. app was closed mid-session before upload succeeded)
-                    val localPendingEntries = pendingCaptureDao.getByResidentId(response.residentPseudonymId)
+                    val localPendingEntries =
+                        pendingCaptureDao.getByResidentId(response.residentPseudonymId)
                     val localPendingFingers = localPendingEntries.mapNotNull { entity ->
                         FingerPosition.entries.find { it.name == entity.fingerType }
                     }
@@ -172,10 +173,15 @@ class RegistrationViewModel @Inject constructor(
     fun startFingerprintCapture(fingerPosition: FingerPosition, launchSdk: () -> Unit) {
         val currentState = _uiState.value
 
-        if(currentState.loadingFinger != null) {
+        if (currentState.loadingFinger != null) {
             _uiState.update {
                 it.copy(
-                    message = "Already processing ${currentState.loadingFinger.name.replace('_', ' ')}"
+                    message = "Already processing ${
+                        currentState.loadingFinger.name.replace(
+                            '_',
+                            ' '
+                        )
+                    }"
                 )
             }
         } else {
@@ -326,10 +332,15 @@ class RegistrationViewModel @Inject constructor(
             return
         }
 
-        if(currentState.loadingFinger != null){
+        if (currentState.loadingFinger != null) {
             _uiState.update {
                 it.copy(
-                    message = "Please wait! ${currentState.loadingFinger.name.replace('_', ' ')} is processing"
+                    message = "Please wait! ${
+                        currentState.loadingFinger.name.replace(
+                            '_',
+                            ' '
+                        )
+                    } is processing"
                 )
             }
             return
@@ -395,7 +406,10 @@ class RegistrationViewModel @Inject constructor(
         }
     }
 
-    fun captureFingerprint(fingerPosition: FingerPosition, launcher: ActivityResultLauncher<Intent>) {
+    fun captureFingerprint(
+        fingerPosition: FingerPosition,
+        launcher: ActivityResultLauncher<Intent>
+    ) {
         startFingerprintCapture(fingerPosition) {
             sdkManager.captureFingerprint(activityResultLauncher = launcher, purpose = "register")
         }

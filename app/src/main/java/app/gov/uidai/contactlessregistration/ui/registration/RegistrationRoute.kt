@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,8 +28,26 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,12 +56,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
 import app.gov.uidai.contactlessregistration.model.CLFingerprint
 import app.gov.uidai.contactlessregistration.model.FingerCaptureStatus
 import app.gov.uidai.contactlessregistration.model.FingerPosition
@@ -53,8 +68,6 @@ import app.gov.uidai.contactlessregistration.model.SharedUiState
 import app.gov.uidai.contactlessregistration.ui.composable.LoadingDialog
 import app.gov.uidai.contactlessregistration.ui.theme.AppButton
 import app.gov.uidai.contactlessregistration.ui.theme.Spacer
-import app.gov.uidai.contactlessregistration.usecase.FingerSDKManager
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,9 +130,11 @@ fun RegistrationRoute(
                     keyboardController?.hide()
                     onNavigateUp()
                 }
+
                 is RegistrationResult.Error -> {
                     snackbarHostState.showSnackbar((registrationResult as RegistrationResult.Error).message)
                 }
+
                 else -> {}
             }
         }
@@ -150,16 +165,6 @@ fun RegistrationScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Personal Information Section
-            PersonalInfoSection(
-                name = uiState.name,
-                phoneNumber = uiState.phoneNumber,
-                onNameChanged = onNameChanged,
-                onPhoneNumberChanged = onPhoneNumberChanged
-            )
-
-            Spacer(16.dp)
-
             // Fingerprint Section
             FingerprintSection(
                 fingerprints = uiState.fingerprints,
@@ -227,48 +232,6 @@ fun RegistrationScreen(
                 CircularProgressIndicator()
             }
         }
-    }
-}
-
-@Composable
-fun PersonalInfoSection(
-    name: String,
-    phoneNumber: String,
-    onNameChanged: (String) -> Unit,
-    onPhoneNumberChanged: (String) -> Unit
-) {
-    Column {
-        Text(
-            text = "Personal Information",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = onNameChanged,
-            label = { Text("Full Name") },
-            placeholder = { Text("Enter your full name") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(16.dp)
-
-        OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = { newValue ->
-                // Only allow digits and limit to reasonable phone number length
-                if (newValue.length <= 15 && newValue.all { it.isDigit() || it == '+' || it == '-' || it == ' ' }) {
-                    onPhoneNumberChanged(newValue)
-                }
-            },
-            label = { Text("Phone Number") },
-            placeholder = { Text("Enter your phone number") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
@@ -518,6 +481,7 @@ fun FingerItem(
             minutiaCount != null -> "Minutia Count: ${minutiaCount.toInt()}"
             isItemAdded || uploadStatus == FingerCaptureStatus.CAPTURED ->
                 position.name.replace('_', ' ')
+
             !isLoading -> "Add ${position.name.replace('_', ' ')}"
             else -> "Capturing..."
         }

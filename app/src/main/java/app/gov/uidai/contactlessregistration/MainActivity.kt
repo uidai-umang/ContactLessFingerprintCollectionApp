@@ -11,10 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
@@ -83,7 +80,8 @@ class MainActivity : ComponentActivity() {
 
         if (!DeviceRegistrationGate.isRegistered(this)) {
             lifecycleScope.launch {
-                val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+                val androidId =
+                    Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
                 val result = deviceUseCase.registerDeviceIfNeeded(
                     context = this@MainActivity,
                     operatorId = "00000000-0000-0000-0000-000000000001",
