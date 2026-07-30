@@ -44,7 +44,8 @@ class FingerSDKManagerImpl (
 
     override fun captureFingerprint(
         activityResultLauncher: ActivityResultLauncher<Intent>,
-        purpose: String
+        purpose: String,
+        fingerPosition: FingerPosition
     ) {
         val txnId = UUID.randomUUID().toString()
         try {
@@ -74,7 +75,8 @@ class FingerSDKManagerImpl (
                     txnId = txnId,
                     purpose = purpose,
                     wantFullImage = true,
-                    wantCroppedImage = true
+                    wantCroppedImage = true,
+                    fingerPosition.name
                 ))
             }
             activityResultLauncher.launch(intent)
@@ -165,7 +167,8 @@ class FingerSDKManagerImpl (
         txnId: String,
         purpose: String,
         wantFullImage: Boolean,
-        wantCroppedImage: Boolean
+        wantCroppedImage: Boolean,
+        fingerType: String
     ): String {
         // This should be implemented based on the actual SDK requirements
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
@@ -177,6 +180,7 @@ class FingerSDKManagerImpl (
                 "      <Param name=\"language\" value=\"${LANGUAGE}\"/>\n" +
                 "      <Param name=\"fullImage\" value=\"${wantFullImage}\"/>\n" +
                 "      <Param name=\"croppedImage\" value=\"${wantCroppedImage}\"/>\n" +
+                "      <Param name=\"fingerType\" value=\"${fingerType}\"/>\n" +
                 "   </CustOpts>\n" +
                 "</PidOptions>".trimIndent()
     }

@@ -411,7 +411,7 @@ class RegistrationViewModel @Inject constructor(
         launcher: ActivityResultLauncher<Intent>
     ) {
         startFingerprintCapture(fingerPosition) {
-            sdkManager.captureFingerprint(activityResultLauncher = launcher, purpose = "register")
+            sdkManager.captureFingerprint(activityResultLauncher = launcher, purpose = "register", fingerPosition = fingerPosition)
         }
     }
 

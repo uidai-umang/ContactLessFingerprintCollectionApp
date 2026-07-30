@@ -3,6 +3,7 @@ package app.gov.uidai.contactlessregistration.usecase
 import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher
 import app.gov.uidai.contactlessregistration.model.CLFingerprint
+import app.gov.uidai.contactlessregistration.model.FingerPosition
 import app.gov.uidai.contactlessregistration.model.SDKResult
 
 /**
@@ -34,7 +35,8 @@ interface FingerSDKManager {
      */
     fun captureFingerprint(
         activityResultLauncher: ActivityResultLauncher<Intent>,
-        purpose: String
+        purpose: String,
+        fingerPosition: FingerPosition
     )
 
     /**
