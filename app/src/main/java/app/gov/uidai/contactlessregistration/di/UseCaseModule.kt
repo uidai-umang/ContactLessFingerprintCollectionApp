@@ -13,6 +13,7 @@ import app.gov.uidai.contactlessregistration.usecase.ResidentUseCase
 import app.gov.uidai.contactlessregistration.usecase.SessionUseCase
 import app.gov.uidai.contactlessregistration.usecase.UIDManager
 import app.gov.uidai.contactlessregistration.usecase.UserUseCase
+import app.gov.uidai.contactlessregistration.usecase.impl.CaptureFileStorage
 import app.gov.uidai.contactlessregistration.usecase.impl.CaptureQueueManagerImpl
 import app.gov.uidai.contactlessregistration.usecase.impl.CaptureUseCaseImpl
 import app.gov.uidai.contactlessregistration.usecase.impl.DeviceUseCaseImpl
@@ -91,10 +92,12 @@ object UseCaseModule {
     @Singleton
     fun provideCaptureQueueManager(
         captureUseCase: CaptureUseCase,
-        pendingCaptureDao: PendingCaptureDao
+        pendingCaptureDao: PendingCaptureDao,
+        captureFileStorage: CaptureFileStorage
     ): CaptureQueueManager = CaptureQueueManagerImpl(
         captureUseCase = captureUseCase,
-        pendingCaptureDao = pendingCaptureDao
+        pendingCaptureDao = pendingCaptureDao,
+        captureFileStorage = captureFileStorage
     )
 
     @Provides
