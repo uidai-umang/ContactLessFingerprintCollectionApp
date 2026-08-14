@@ -18,5 +18,9 @@ data class CaptureRequest(
     @SerializedName("image_checksum") val imageChecksum: String = "",
     @SerializedName("camera_model") val cameraModel: String = "",
     @SerializedName("camera_resolution") val cameraResolution: String = "",
-    @SerializedName("device_model") val deviceModel: String = ""
+    @SerializedName("device_model") val deviceModel: String = "",
+    @SerializedName("encrypted_session_key") val encryptedSessionKey: String,
+    @SerializedName("iv") val iv: String,
+    @SerializedName("hmac") val hmac: String,
+    @SerializedName("thumbprint") val thumbprint: String
 )

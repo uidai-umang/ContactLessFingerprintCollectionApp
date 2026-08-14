@@ -21,7 +21,7 @@ import javax.inject.Singleton
 
 @Database(
     entities = [UserEntity::class, FingerprintEntity::class, PendingCaptureEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(
@@ -47,7 +47,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "contactless_registration_database"
-        ).fallbackToDestructiveMigration().build()
+        ).fallbackToDestructiveMigration(dropAllTables = false).build()
     }
     
     @Provides

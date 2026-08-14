@@ -52,7 +52,12 @@ object MultipartHelper {
             "image_checksum" to req.imageChecksum.toRequestBody(),
             "camera_model" to req.cameraModel.toRequestBody(),
             "camera_resolution" to req.cameraResolution.toRequestBody(),
-            "device_model" to req.deviceModel.toRequestBody()
+            "device_model" to req.deviceModel.toRequestBody(),
+            "encrypted_session_key" to req.encryptedSessionKey.toRequestBody("text/plain".toMediaTypeOrNull()),
+            "iv" to req.iv.toRequestBody("text/plain".toMediaTypeOrNull()),
+            "hmac" to req.hmac.toRequestBody("text/plain".toMediaTypeOrNull()),
+            "thumbprint" to req.thumbprint.toRequestBody("text/plain".toMediaTypeOrNull())
+
         )
     }
 
@@ -77,6 +82,10 @@ object MultipartHelper {
             parts["camera_model_$index"] = req.cameraModel.toRequestBody()
             parts["camera_resolution_$index"] = req.cameraResolution.toRequestBody()
             parts["device_model_$index"] = req.deviceModel.toRequestBody()
+            parts["encrypted_session_key_$index"] = req.encryptedSessionKey.toRequestBody("text/plain".toMediaTypeOrNull())
+            parts["iv_$index"] = req.iv.toRequestBody("text/plain".toMediaTypeOrNull())
+            parts["hmac_$index"] = req.hmac.toRequestBody("text/plain".toMediaTypeOrNull())
+            parts["thumbprint_$index"] = req.thumbprint.toRequestBody("text/plain".toMediaTypeOrNull())
         }
         return parts
     }

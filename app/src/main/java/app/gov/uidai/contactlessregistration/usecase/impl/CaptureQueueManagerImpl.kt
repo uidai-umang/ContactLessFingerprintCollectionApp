@@ -194,7 +194,11 @@ class CaptureQueueManagerImpl @Inject constructor(
             imageChecksum = request.imageChecksum,
             cameraModel = request.cameraModel,
             cameraResolution = request.cameraResolution,
-            deviceModel = request.deviceModel
+            deviceModel = request.deviceModel,
+            encryptedSessionKey = request.encryptedSessionKey,
+            iv = request.iv,
+            hmac = request.hmac,
+            thumbprint = request.thumbprint
         )
         pendingCaptureDao.insert(entity)
     }
@@ -214,7 +218,11 @@ class CaptureQueueManagerImpl @Inject constructor(
             imageChecksum = imageChecksum,
             cameraModel = cameraModel,
             cameraResolution = cameraResolution,
-            deviceModel = deviceModel
+            deviceModel = deviceModel,
+            encryptedSessionKey = encryptedSessionKey,
+            iv = iv,
+            hmac = hmac,
+            thumbprint = thumbprint
         )
     }
 }

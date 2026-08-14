@@ -22,6 +22,7 @@ import app.gov.uidai.contactlessregistration.usecase.ResidentUseCase
 import app.gov.uidai.contactlessregistration.usecase.SessionUseCase
 import app.gov.uidai.contactlessregistration.usecase.UserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import `in`.gov.uidai.contactlessregistration.encryption.EncryptionService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,7 +39,8 @@ class RegistrationViewModel @Inject constructor(
     private val sessionUseCase: SessionUseCase,
     private val captureQueueManager: CaptureQueueManager,
     private val pendingCaptureDao: PendingCaptureDao,
-    private val sdkManager: FingerSDKManager
+    private val sdkManager: FingerSDKManager,
+    private val encryptionService: EncryptionService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrationUiState())
@@ -251,17 +253,23 @@ class RegistrationViewModel @Inject constructor(
     ) {
         val hand = if (fingerPosition.name.startsWith("LEFT")) "LEFT" else "RIGHT"
 
+        val encrypted = encryptionService.encryptImage(imageBytes)
+
         val request = CaptureRequest(
             sessionId = currentSessionId,
             residentPseudonymId = currentResidentId,
             operatorId = testOperatorId,
             fingerType = fingerPosition.name,
             hand = hand,
-            imageBytes = imageBytes,
+            imageBytes = encrypted.encryptedImageBytes,
             deviceModel = Build.MODEL,
             blurScore = blurScore,
             brightnessScore = brightnessScore,
-            glareScore = glareScore
+            glareScore = glareScore,
+            encryptedSessionKey = encrypted.encryptedSessionKey,
+            iv = encrypted.iv,
+            hmac = encrypted.hmac,
+            thumbprint = encrypted.thumbprint
         )
 
         val result = captureQueueManager.uploadOrQueue(request)
