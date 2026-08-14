@@ -10,11 +10,14 @@ import app.gov.uidai.contactlessregistration.model.capture.CaptureRequest
 import app.gov.uidai.contactlessregistration.model.capture.CaptureResponse
 import app.gov.uidai.contactlessregistration.usecase.CaptureQueueManager
 import app.gov.uidai.contactlessregistration.usecase.CaptureUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class CaptureQueueManagerImpl @Inject constructor(
     private val captureUseCase: CaptureUseCase,
-    private val pendingCaptureDao: PendingCaptureDao
+    private val pendingCaptureDao: PendingCaptureDao,
+    private val captureFileStorage: CaptureFileStorage
 ) : CaptureQueueManager {
 
     companion object {
@@ -87,6 +90,7 @@ class CaptureQueueManagerImpl @Inject constructor(
         return when (result) {
             is ApiResult.Success -> {
                 pendingCaptures.forEach { entity ->
+                    captureFileStorage.delete(entity.imageFilePath)
                     pendingCaptureDao.deleteByResidentAndFingerType(
                         entity.residentPseudonymId,
                         entity.fingerType
@@ -99,6 +103,7 @@ class CaptureQueueManagerImpl @Inject constructor(
             is ApiResult.Error -> {
                 if (ErrorCodeMapper.behaviorFor(result.code) == ErrorBehavior.TREAT_AS_DUPLICATE_SUCCESS) {
                     pendingCaptures.forEach { entity ->
+                        captureFileStorage.delete(entity.imageFilePath)
                         pendingCaptureDao.deleteByResidentAndFingerType(
                             entity.residentPseudonymId,
                             entity.fingerType
@@ -151,6 +156,7 @@ class CaptureQueueManagerImpl @Inject constructor(
             when (result) {
                 is ApiResult.Success -> {
                     retryable.forEach { entity ->
+                        captureFileStorage.delete(entity.imageFilePath)
                         pendingCaptureDao.deleteByResidentAndFingerType(
                             entity.residentPseudonymId,
                             entity.fingerType
@@ -173,13 +179,18 @@ class CaptureQueueManagerImpl @Inject constructor(
 
     // Saves a failed capture request to local Room DB pending queue
     private suspend fun saveToPendingQueue(request: CaptureRequest) {
+        val fileName = "${request.sessionId}_${request.fingerType}_${System.currentTimeMillis()}.enc"
+        val filePath = withContext(Dispatchers.IO) {
+            captureFileStorage.write(request.imageBytes, fileName)
+        }
+
         val entity = PendingCaptureEntity(
             sessionId = request.sessionId,
             residentPseudonymId = request.residentPseudonymId,
             operatorId = request.operatorId,
             fingerType = request.fingerType,
             hand = request.hand,
-            imageBytes = request.imageBytes,
+            imageFilePath = filePath,
             imageChecksum = request.imageChecksum,
             cameraModel = request.cameraModel,
             cameraResolution = request.cameraResolution,
@@ -189,7 +200,10 @@ class CaptureQueueManagerImpl @Inject constructor(
     }
 
     // Converts PendingCaptureEntity back to CaptureRequest for upload
-    private fun PendingCaptureEntity.toCaptureRequest(): CaptureRequest {
+    private suspend fun PendingCaptureEntity.toCaptureRequest(): CaptureRequest {
+        val imageBytes = withContext(Dispatchers.IO) {
+            captureFileStorage.read(imageFilePath)
+        }
         return CaptureRequest(
             sessionId = sessionId,
             residentPseudonymId = residentPseudonymId,

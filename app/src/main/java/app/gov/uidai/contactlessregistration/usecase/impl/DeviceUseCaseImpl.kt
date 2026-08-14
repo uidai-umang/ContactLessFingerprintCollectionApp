@@ -32,6 +32,12 @@ class DeviceUseCaseImpl @Inject constructor(
 
         Log.d("DeviceReg", "fingerprintHash len=${cameraSpec.fingerprintHash.length}, deviceFingerprint len=${Build.FINGERPRINT.length}")
 
+        val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Build.SOC_MODEL
+        } else {
+            "unknown"  // or omit the field entirely, or use Build.HARDWARE / Build.BOARD as an older fallback
+        }
+
         val request = DeviceRegistrationRequest(
             operatorId = operatorId,
             androidId = androidId,
@@ -41,7 +47,7 @@ class DeviceUseCaseImpl @Inject constructor(
             osVersion = Build.VERSION.RELEASE,
             androidSdkVersion = Build.VERSION.SDK_INT,
             androidSecurityPatch = Build.VERSION.SECURITY_PATCH,
-            socModel = Build.SOC_MODEL.takeIf { Build.VERSION.SDK_INT >= 31 } ?: Build.HARDWARE,
+            socModel = socModel,
             ramTotalMb = getTotalRamMb(context),
             cameraFingerprintHash = cameraSpec.fingerprintHash,
             cameraId = cameraSpec.cameraId,
