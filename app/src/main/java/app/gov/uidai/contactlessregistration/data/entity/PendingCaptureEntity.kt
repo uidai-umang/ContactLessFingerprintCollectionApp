@@ -17,5 +17,9 @@ data class PendingCaptureEntity(
     val cameraResolution: String,
     val deviceModel: String,
     val retryCount: Int = 0,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val encryptedSessionKey: String,
+    val iv: String,
+    val hmac: String,
+    val thumbprint: String
 )
