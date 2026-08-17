@@ -1,10 +1,12 @@
 package app.gov.uidai.contactlessregistration
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -38,83 +40,100 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val sharedViewModel: SharedViewModel by viewModels()
-
-    @Inject
-    lateinit var deviceUseCase: DeviceUseCase
-
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted -> }
+//    private val sharedViewModel: SharedViewModel by viewModels()
+//
+//    @Inject
+//    lateinit var deviceUseCase: DeviceUseCase
+//
+//    private val notificationPermissionLauncher = registerForActivityResult(
+//        ActivityResultContracts.RequestPermission()
+//    ) { isGranted -> }
+//
+//    override fun onCreate(savedInstanceState: Bundle?) {
+//        super.onCreate(savedInstanceState)
+//        enableEdgeToEdge(
+//            statusBarStyle = SystemBarStyle.light(
+//                scrim = Color.Transparent.toArgb(),
+//                darkScrim = md_theme_scrim.toArgb()
+//            ),
+//            navigationBarStyle = SystemBarStyle.light(
+//                scrim = md_theme_surface.toArgb(),
+//                darkScrim = md_theme_scrim.toArgb()
+//            )
+//        )
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//            if (ContextCompat.checkSelfPermission(
+//                    this, Manifest.permission.POST_NOTIFICATIONS
+//                ) != PackageManager.PERMISSION_GRANTED
+//            ) {
+//                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+//            }
+//        }
+//
+//        sharedViewModel.initialize(this)
+//        CaptureWorkScheduler.schedule(this)
+//
+//        if (!DeviceRegistrationGate.isRegistered(this)) {
+//            lifecycleScope.launch {
+//                val androidId =
+//                    Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//                val result = deviceUseCase.registerDeviceIfNeeded(
+//                    context = this@MainActivity,
+//                    operatorId = "00000000-0000-0000-0000-000000000001",
+//                    androidId = androidId
+//                )
+//                if (result is ApiResult.Success) {
+//                    DeviceRegistrationGate.markRegistered(this@MainActivity)
+//                }
+//            }
+//        }
+//
+//        setContent {
+//            AttendanceAppTheme {
+//                val navController = rememberNavController()
+//                val sharedUiState by sharedViewModel.uiState.collectAsStateWithLifecycle()
+//
+//                NavHost(navController = navController, startDestination = Routes.UidEntry.route) {
+//                    composable(Routes.UidEntry.route) {
+//                        UidEntryRoute(
+//                            sharedUiState = sharedUiState,
+//                            onClearSharedMessage = sharedViewModel::clearError,
+//                            onNavigateToRegistration = { uidHash ->
+//                                navController.navigate(Routes.Registration.createRoute(uidHash))
+//                            }
+//                        )
+//                    }
+//                    composable(
+//                        route = Routes.Registration.route,
+//                        arguments = listOf(navArgument(Routes.ARG_UID_HASH) { type = NavType.StringType })
+//                    ) { backStackEntry ->
+//                        val uidHash = backStackEntry.arguments?.getString(Routes.ARG_UID_HASH).orEmpty()
+//                        RegistrationRoute(
+//                            uidHash = uidHash,
+//                            sharedUiState = sharedUiState,
+//                            onNavigateUp = { navController.navigateUp() }
+//                        )
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(
-                scrim = Color.Transparent.toArgb(),
-                darkScrim = md_theme_scrim.toArgb()
-            ),
-            navigationBarStyle = SystemBarStyle.light(
-                scrim = md_theme_surface.toArgb(),
-                darkScrim = md_theme_scrim.toArgb()
-            )
-        )
+        launchSdkApp()
+        finish()
+    }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this, Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+    private fun launchSdkApp() {
+        val intent = Intent("in.gov.uidai.contactlessfingersdk_sita.CAPTURE").apply {
+            addCategory(Intent.CATEGORY_DEFAULT)
         }
-
-        sharedViewModel.initialize(this)
-        CaptureWorkScheduler.schedule(this)
-
-        if (!DeviceRegistrationGate.isRegistered(this)) {
-            lifecycleScope.launch {
-                val androidId =
-                    Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-                val result = deviceUseCase.registerDeviceIfNeeded(
-                    context = this@MainActivity,
-                    operatorId = "00000000-0000-0000-0000-000000000001",
-                    androidId = androidId
-                )
-                if (result is ApiResult.Success) {
-                    DeviceRegistrationGate.markRegistered(this@MainActivity)
-                }
-            }
-        }
-
-        setContent {
-            AttendanceAppTheme {
-                val navController = rememberNavController()
-                val sharedUiState by sharedViewModel.uiState.collectAsStateWithLifecycle()
-
-                NavHost(navController = navController, startDestination = Routes.UidEntry.route) {
-                    composable(Routes.UidEntry.route) {
-                        UidEntryRoute(
-                            sharedUiState = sharedUiState,
-                            onClearSharedMessage = sharedViewModel::clearError,
-                            onNavigateToRegistration = { uidHash ->
-                                navController.navigate(Routes.Registration.createRoute(uidHash))
-                            }
-                        )
-                    }
-                    composable(
-                        route = Routes.Registration.route,
-                        arguments = listOf(navArgument(Routes.ARG_UID_HASH) { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val uidHash = backStackEntry.arguments?.getString(Routes.ARG_UID_HASH).orEmpty()
-                        RegistrationRoute(
-                            uidHash = uidHash,
-                            sharedUiState = sharedUiState,
-                            onNavigateUp = { navController.navigateUp() }
-                        )
-                    }
-                }
-            }
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Contactless Fingerprint SDK app not installed", Toast.LENGTH_LONG).show()
         }
     }
 }
