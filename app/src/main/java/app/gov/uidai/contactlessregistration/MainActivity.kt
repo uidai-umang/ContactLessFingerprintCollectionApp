@@ -39,6 +39,7 @@ import app.gov.uidai.contactlessregistration.utils.worker.CaptureWorkScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 import kotlinx.coroutines.launch
+import app.gov.uidai.registration.ContactlessRegistrationSdk
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -133,7 +134,9 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        launchSdkApp()
+//        launchSdkApp()
+        val intent = ContactlessRegistrationSdk.createIntent(this)
+        startActivity(intent)
         finish()
     }
 

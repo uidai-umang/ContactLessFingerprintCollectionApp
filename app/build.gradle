@@ -129,4 +129,6 @@ dependencies {
     // Chucker
     debugImplementation(libs.chucker.debug)
     releaseImplementation(libs.chucker.release)
+
+    implementation "in.gov.uidai.sdk:contactless-registration-sdk.debug:alpha-01"
 }
