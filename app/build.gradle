@@ -130,5 +130,10 @@ dependencies {
     debugImplementation(libs.chucker.debug)
     releaseImplementation(libs.chucker.release)
 
-    implementation "in.gov.uidai.sdk:contactless-registration-sdk.debug:alpha-01"
+    debugImplementation("in.gov.uidai.sdk:contactless-registration-sdk:alpha-01") {
+        exclude group: "com.github.chuckerteam.chucker",
+                module: "library-no-op"
+    }
+
+    releaseImplementation("in.gov.uidai.sdk:contactless-registration-sdk:alpha-01")
 }
