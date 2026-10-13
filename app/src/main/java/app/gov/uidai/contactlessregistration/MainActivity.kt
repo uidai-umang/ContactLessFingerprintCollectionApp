@@ -135,8 +135,7 @@ class MainActivity : ComponentActivity() {
         }
 
 //        launchSdkApp()
-        val intent = ContactlessRegistrationSdk.createIntent(this)
-        startActivity(intent)
+        launchSDK()
         finish()
     }
 
@@ -152,6 +151,10 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    private fun launchSDK() {
+        val intent = ContactlessRegistrationSdk.createIntent(this)
+        startActivity(intent)
+    }
 
     private fun launchSdkApp() {
         val intent = Intent("in.gov.uidai.contactlessfingersdk_sita.CAPTURE").apply {
