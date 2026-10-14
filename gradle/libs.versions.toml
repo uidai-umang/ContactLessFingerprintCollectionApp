@@ -1,13 +1,13 @@
 [versions]
-agp = "8.11.1"
-kotlin = "2.2.21"
-ksp = "2.2.21-2.0.4"
+agp = "9.2.1"
+kotlin = "2.2.10"
+ksp = "2.2.10-2.0.2"
 activityCompose = "1.10.1"
 composeBom = "2025.06.01"
 coroutines = "1.7.3"
-hilt = "2.57"
+hilt = "2.59.2"
 androidxHilt = "1.2.0"
-navigationSafeArgs = "2.9.4"
+navigationSafeArgs = "2.9.6"
 core = "1.17.0"
 appcompat = "1.7.1"
 lifecycle = "2.9.3"
@@ -104,7 +104,7 @@ chucker-release = { group = "com.github.chuckerteam.chucker", name = "library-no
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+#kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 dagger-hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
